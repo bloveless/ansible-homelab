@@ -1,0 +1,68 @@
+---
+- hosts: mediaserver
+  gather_facts: yes
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+
+  handlers:
+    - name: Restart radarr
+      systemd:
+        name: radarr
+        daemon_reload: yes
+        state: restarted
+
+  tasks:
+    - name: Ensure radarrs dependencies are installed
+      pacman:
+        name:
+          - curl
+          - sqlite3
+        state: present
+
+    - name: Ensure that the media group exists
+      group:
+        name: media
+        state: present
+
+    - name: Ensure that the radarr user exists
+      user:
+        append: yes
+        groups:
+          - media
+        name: radarr
+        state: present
+
+    - name: Ensure that the radarr config directory exists
+      file:
+        state: directory
+        path: /var/lib/radarr
+        owner: radarr
+        group: radarr
+        mode: 0644
+
+    - name: Ensure that radarrs files are downloaded
+      unarchive:
+        remote_src: yes
+        src: "{{ radarr_download_url }}"
+        dest: /opt
+        owner: radarr
+        group: radarr
+        mode: 0644
+
+    - name: Ensure the radarr service file exists
+      copy:
+        src: config/radarr.service
+        dest: /etc/systemd/system/radarr.service
+        group: root
+        owner: root
+      notify:
+        - Restart radarr
+
+    - name: Ensure the radarr service is started and enabled
+      service:
+        name: radarr
+        state: started
+        enabled: true
+
