@@ -1,0 +1,17 @@
+[Unit]
+Description=NZBGet Daemon
+Documentation=http://nzbget.net/Documentation
+After=network.target
+
+[Service]
+User=nzbget
+Group=media
+Type=forking
+ExecStart=/home/nzbget/nzbget/nzbget -D
+ExecStop=/home/nzbget/nzbget/nzbget -Q
+ExecReload=/home/nzbget/nzbget/nzbget -O
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

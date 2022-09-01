@@ -5,6 +5,7 @@
 
   vars_files:
     - vars/main.yaml
+    - vars/secrets.yaml
 
   handlers:
     - name: Restart radarr
@@ -13,13 +14,76 @@
         daemon_reload: yes
         state: restarted
 
-  tasks:
-    - name: Ensure radarrs dependencies are installed
+    - name: Restart nzbget
+      systemd:
+        name: nzbget
+        daemon_reload: yes
+        state: restarted
+
+    - name: Restart qbittorrent
+      systemd:
+        name: qbittorrent-nox
+        daemon_reload: yes
+        state: restarted
+
+  pre_tasks:
+    - name: Ensure pacman cache is updated
+      community.general.pacman:
+        update_cache: yes
+
+    - name: Ensure dependencies are installed
       pacman:
         name:
           - curl
           - sqlite3
+          - wireguard-tools
+          - qbittorrent-nox
+          - rpcbind
+          - nfs-utils
+          - ntp
         state: present
+
+    - name: Ensure ntpd daemon is started and enabled
+      systemd:
+        name: ntpd
+        enabled: yes
+        state: started
+
+    - name: Ensure that the media mount directory exists
+      file:
+        state: directory
+        path: /mnt/media
+
+    - name: Ensure that the media NFS is mounted
+      mount:
+        src: 192.168.4.245:/volume1/k8s/media-server/plex/data
+        path: /mnt/media
+        opts: rw,sync,hard,nfsvers=4.1
+        state: mounted
+        fstype: nfs4
+
+  tasks:
+    - name: Ensure wireguard config is present
+      copy:
+        content: "{{ wireguard_config }}"
+        dest: /etc/wireguard/wg0.conf
+        owner: root
+        group: root
+        mode: 0600
+
+    - name: Ensure that ip forwarding is enabled
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        state: present
+        sysctl_set: yes
+        reload: yes
+
+    - name: Ensure wireguard interface is started and enabled
+      systemd:
+        name: wg-quick@wg0
+        enabled: yes
+        state: started
 
     - name: Ensure that the media group exists
       group:
@@ -41,15 +105,21 @@
         owner: radarr
         group: radarr
         mode: 0774
+    
+    - name: Ensure that radarr files are downloaded
+      get_url:
+        url: "{{ radarr_download_url }}"
+        dest: "/tmp/radarr-{{ radarr_version }}.tgz"
+        checksum: "{{ radarr_checksum }}"
 
-    - name: Ensure that radarrs files are downloaded
+    - name: Ensure radarr source is extracted
       unarchive:
-        remote_src: yes
-        src: "{{ radarr_download_url }}"
+        src: "/tmp/radarr-{{ radarr_version }}.tgz"
         dest: /opt
         owner: radarr
         group: radarr
         mode: 0764
+        creates: /opt/Radarr/Radarr
 
     - name: Ensure that the radarr command is executable
       file:
@@ -71,3 +141,61 @@
         state: started
         enabled: true
 
+    - name: Ensure that the nzbget user exists
+      user:
+        append: yes
+        groups:
+          - media
+        name: nzbget
+        state: present
+
+    - name: Ensure that the nzbget install file exists
+      get_url:
+        url: https://nzbget.net/download/nzbget-latest-bin-linux.run
+        dest: /tmp/install-nzbget.run
+
+    - name: Ensure nzbget is installed
+      become: yes
+      become_user: nzbget
+      command:
+        cmd: sh /tmp/install-nzbget.run
+        chdir: /home/nzbget
+        creates: /home/nzbget/nzbget/nzbget
+        
+    - name: Ensure the nzbget service file exists
+      copy:
+        src: config/nzbget.service
+        dest: /etc/systemd/system/nzbget.service
+        group: root
+        owner: root
+      notify:
+        - Restart nzbget
+
+    - name: Ensure the nzbget service is started and enabled
+      systemd:
+        name: nzbget
+        daemon_reload: yes
+        state: started
+
+    - name: Ensure that the qbittorrent user exists
+      user:
+        append: yes
+        groups:
+          - media
+        name: qbittorrent
+        state: present
+
+    - name: Ensure the qbittorrent service file exists
+      copy:
+        src: config/qbittorrent-nox.service
+        dest: /etc/systemd/system/qbittorrent-nox.service
+        group: root
+        owner: root
+      notify:
+        - Restart qbittorrent
+
+    - name: Ensure the qbittorret service is started and enabled
+      systemd:
+        name: qbittorrent-nox
+        daemon_reload: yes
+        state: started
