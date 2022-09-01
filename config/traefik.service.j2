@@ -6,6 +6,9 @@ Wants=network-online.target systemd-networkd-wait-online.service
 [Service]
 Restart=on-abnormal
 
+Environment=CF_API_EMAIL={{ cloudflare_api_email }}
+Environment=CF_API_KEY={{ cloudflare_api_key }}
+
 ; User and group the process will run as.
 User=traefik
 Group=traefik

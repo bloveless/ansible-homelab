@@ -6,7 +6,7 @@
   vars_files:
     - vars/main.yaml
     - vars/secrets.yaml
-  
+
   handlers:
     - name: Restart traefik
       systemd:
@@ -34,13 +34,13 @@
 
   tasks:
     - name: Ensure that cloudflared is downloaded
-      get_url: 
+      get_url:
         url: "https://github.com/cloudflare/cloudflared/releases/download/{{ cloudflared_version }}/cloudflared-linux-amd64"
         dest: /usr/local/bin/cloudflared
         checksum: "{{ cloudflared_checksum }}"
     - name: Ensure that cloudflared is setup
       command:
-        cmd: "cloudflared service install {{ cloudflare_key }}"
+        cmd: "cloudflared service install {{ cloudflared_key }}"
         creates: /etc/systemd/system/cloudflared.service
 
     - name: Ensure the cloudflared service is started and enabled
@@ -81,8 +81,8 @@
         group: root
 
     - name: Ensure the traefik service file exists
-      copy:
-        src: config/traefik.service
+      template:
+        src: config/traefik.service.j2
         dest: /etc/systemd/system/traefik.service
         group: root
         owner: root
@@ -104,15 +104,30 @@
         owner: traefik
         group: traefik
 
-    - name: Ensure the traefik config file exists
+    - name: Ensure that the traefik config conf directory exists
+      file:
+        state: directory
+        path: /etc/traefik/conf
+        owner: traefik
+        group: traefik
+
+    - name: Ensure the traefik static config file exists
       copy:
-        src: config/traefik.toml
-        dest: /etc/traefik/traefik.toml
-        group: root
-        owner: root
+        src: config/traefik.static.yaml
+        dest: /etc/traefik/traefik.yaml
+        group: traefik
+        owner: traefik
         mode: 0644
       notify:
         - Restart traefik
+
+    - name: Ensure that the traefik dynamic config file exists
+      copy:
+        src: config/traefik.dynamic.yaml
+        dest: /etc/traefik/conf/traefik.dynamic.yaml
+        group: traefik
+        owner: traefik
+        mode : 0644
 
     - name: Ensure the traefik service is started and enabled
       systemd:

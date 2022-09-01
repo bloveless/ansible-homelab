@@ -1,0 +1,35 @@
+http:
+  routers:
+    brennonloveless:
+      entryPoints:
+        - web
+        - websecure
+      rule: "Host(`brennonloveless.com`) || Host(`www.brennonloveless.com`)"
+      tls:
+        certResolver: "letsencrypt"
+
+    overseerr:
+      entryPoints:
+        - web
+      rule: "Host(`overseerr.brennonloveless.com`)"
+      service: "kubernetes"
+
+    overseerr-secure:
+      entryPoints:
+        - websecure
+      rule: "Host(`overseerr.brennonloveless.com`)"
+      service: "kubernetes-secure"
+      tls:
+        certResolver: "letsencrypt"
+
+  services:
+    kubernetes:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.4.225/"
+
+    kubernetes-secure:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.4.225/"
+
