@@ -2,7 +2,6 @@ http:
   routers:
     brennonloveless:
       entryPoints:
-        - web
         - websecure
       rule: "Host(`brennonloveless.com`) || Host(`www.brennonloveless.com`)"
       tls:
@@ -10,33 +9,14 @@ http:
 
     overseerr:
       entryPoints:
-        - web
-      # middlewares:
-      #   - redirect-to-https
-      rule: "Host(`overseerr.brennonloveless.com`)"
-      service: "kubernetes"
-
-    overseerr-secure:
-      entryPoints:
         - websecure
       rule: "Host(`overseerr.brennonloveless.com`)"
-      service: "kubernetes-secure"
+      service: "kubernetes"
       tls:
         certResolver: "letsencrypt"
 
-  middlewares:
-    redirect-to-https:
-      redirectScheme:
-        scheme: https
-        permanent: true
-
   services:
     kubernetes:
-      loadBalancer:
-        servers:
-          - url: "http://192.168.4.225/"
-
-    kubernetes-secure:
       loadBalancer:
         servers:
           - url: "http://192.168.4.225/"
