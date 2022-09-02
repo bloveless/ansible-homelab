@@ -27,11 +27,8 @@ entryPoints:
 
   websecure:
     address: ":443"
-    http:
-      tls:
-        certResolver: "letsencrypt"
 
-certificateResolvers:
+certificatesResolvers:
   letsencrypt:
     acme:
       email: "brennon.loveless@gmail.com"
@@ -54,7 +51,7 @@ log:
   # Optional
   # Default: "ERROR"
   #
-  level: DEBUG
+  level: INFO
 
   # Sets the filepath for the traefik log. If not specified, stdout will be used.
   # Intermediate directories are created if necessary.

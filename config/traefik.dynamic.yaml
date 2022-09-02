@@ -11,6 +11,8 @@ http:
     overseerr:
       entryPoints:
         - web
+      # middlewares:
+      #   - redirect-to-https
       rule: "Host(`overseerr.brennonloveless.com`)"
       service: "kubernetes"
 
@@ -22,6 +24,12 @@ http:
       tls:
         certResolver: "letsencrypt"
 
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
   services:
     kubernetes:
       loadBalancer:
@@ -31,5 +39,5 @@ http:
     kubernetes-secure:
       loadBalancer:
         servers:
-          - url: "https://192.168.4.225/"
+          - url: "http://192.168.4.225/"
 
