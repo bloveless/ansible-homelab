@@ -28,7 +28,7 @@
 
   pre_tasks:
     - name: Ensure pacman cache is updated
-      community.general.pacman:
+      pacman:
         update_cache: yes
 
     - name: Ensure dependencies are installed

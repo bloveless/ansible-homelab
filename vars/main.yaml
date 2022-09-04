@@ -9,3 +9,4 @@ cloudflared_checksum: sha256:c971d24ae2f133b2579ac6fa3b1af34847e0f3e332766fbdc5f
 traefik_version: 2.8.3
 traefik_checksum: sha256:617b869cf3787cf1832fd5eb9a037bcccd93fa4625b896760027bb764f9c4fcf
 
+fileflows_tag: 1.0.2

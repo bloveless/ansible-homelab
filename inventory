@@ -9,3 +9,12 @@
 [traefik]
 192.168.5.52 ansible_user=root
 
+[fileflows]
+192.168.5.14 ansible_user=root
+192.168.5.53 ansible_user=root
+
+[fileflows_server]
+192.168.5.14 ansible_user=root
+
+[fileflows_node]
+192.168.5.53 ansible_user=root
