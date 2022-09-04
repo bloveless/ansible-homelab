@@ -47,19 +47,6 @@
         state: mounted
         fstype: nfs
 
-    - name: Ensure that the media group exists
-      group:
-        name: media
-        state: present
-
-    - name: Ensure that the fileflows user exists
-      user:
-        append: yes
-        groups:
-          - media
-        name: fileflows
-        state: present
-
     - name: Ensure that the fileflows directory exists
       file:
         state: directory
@@ -94,6 +81,9 @@
 
 - hosts: fileflows_server
   become: yes
+
+  vars_files:
+    - vars/main.yaml
 
   tasks:
     - name: Ensure that the fileflows server docker container is running
