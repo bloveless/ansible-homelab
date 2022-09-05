@@ -6,6 +6,9 @@
 [mediaserver]
 192.168.5.13 ansible_user=root
 
+[mediaserver_builder]
+192.168.5.13 ansible_user=builder
+
 [traefik]
 192.168.5.52 ansible_user=root
 

@@ -1,8 +1,8 @@
 traefik:
 	ansible-playbook -i inventory traefik.yaml
 
-media-server:
-	ansible-playbook -i inventory media-server.yaml
+mediaserver:
+	ansible-playbook -i inventory mediaserver.yaml
 
 fileflows:
 	ansible-playbook -i inventory fileflows.yaml
