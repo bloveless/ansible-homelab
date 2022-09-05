@@ -7,3 +7,5 @@ media-server:
 fileflows:
 	ansible-playbook -i inventory fileflows.yaml
 
+brennonloveless:
+	ansible-playbook -i inventory brennonloveless.yaml

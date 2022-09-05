@@ -4,6 +4,7 @@ http:
       entryPoints:
         - websecure
       rule: "Host(`brennonloveless.com`) || Host(`www.brennonloveless.com`)"
+      service: "brennonloveless"
       tls:
         certResolver: "letsencrypt"
 
@@ -20,4 +21,9 @@ http:
       loadBalancer:
         servers:
           - url: "http://192.168.4.225/"
+
+    brennonloveless:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.103/"
 
