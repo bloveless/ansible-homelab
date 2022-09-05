@@ -1,6 +1,20 @@
 http:
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
   routers:
     brennonloveless:
+      entryPoints:
+        - web
+      rule: "Host(`brennonloveless.com`) || Host(`www.brennonloveless.com`)"
+      middlewares:
+        - redirect-to-https
+      service: noop@internal
+
+    brennonloveless-secure:
       entryPoints:
         - websecure
       rule: "Host(`brennonloveless.com`) || Host(`www.brennonloveless.com`)"
@@ -10,11 +24,25 @@ http:
 
     overseerr:
       entryPoints:
+        - web
+      rule: "Host(`overseerr.brennonloveless.com`)"
+      middlewares:
+        - redirect-to-https
+      service: noop@internal
+
+    overseerr-secure:
+      entryPoints:
         - websecure
       rule: "Host(`overseerr.brennonloveless.com`)"
       service: "kubernetes"
       tls:
         certResolver: "letsencrypt"
+
+    radarr:
+      entryPoints:
+        - web
+      rule: "Host(`radarr.lan`) || Host(`www.radarr.lan`)"
+      service: "radarr"
 
   services:
     kubernetes:
@@ -27,3 +55,7 @@ http:
         servers:
           - url: "http://192.168.5.103/"
 
+    radarr:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.13:7878/"
