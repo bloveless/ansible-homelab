@@ -40,10 +40,9 @@ http:
 
     portainer:
       entryPoints:
-        - websecure
+        - web
       rule: "Host(`portainer.lan`)"
       service: "portainer"
-      tls: true
 
     radarr:
       entryPoints:
