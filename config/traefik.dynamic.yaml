@@ -16,6 +16,13 @@ http:
       tls:
         certResolver: "letsencrypt"
 
+    portainer:
+      entryPoints:
+        - websecure
+      rule: "Host(`portainer.lan`)"
+      service: "portainer"
+      tls: true
+
   services:
     kubernetes:
       loadBalancer:
@@ -26,4 +33,9 @@ http:
       loadBalancer:
         servers:
           - url: "http://192.168.5.103/"
+
+    portainer:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.5.15:9443/"
 

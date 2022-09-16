@@ -41,6 +41,9 @@ certificatesResolvers:
       dnsChallenge:
         provider: "cloudflare"
 
+serversTransport:
+  insecureSkipVerify: true
+
 ################################################################
 # Traefik logs configuration
 ################################################################
@@ -56,7 +59,7 @@ log:
   # Optional
   # Default: "ERROR"
   #
-  level: INFO
+  level: DEBUG
 
   # Sets the filepath for the traefik log. If not specified, stdout will be used.
   # Intermediate directories are created if necessary.
