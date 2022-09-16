@@ -25,3 +25,29 @@
         enabled: yes
         state: started
 
+  handlers:
+    - name: Ensure nginx directory is clean
+      command:
+        cmd: rm -rf /usr/share/nginx/html
+      listen: Redeploy website content
+
+    - name: Ensure website content is extracted
+      unarchive:
+        remote_src: yes
+        src: "/opt/brennonloveless.com-{{ brennonloveless_tag }}.tgz"
+        dest: "/opt"
+      listen: Redeploy website content
+
+    - name: Copy website content into nginx html directory
+      command:
+        cmd: cp -r /opt/brennonloveless.com /usr/share/nginx/html
+      listen: Redeploy website content
+
+  tasks:
+    - name: Ensure website content is downloaded
+      get_url:
+        url: "{{ brennonloveless_download_url }}"
+        checksum: "{{ brennonloveless_checksum }}"
+        dest: "/opt/brennonloveless.com-{{ brennonloveless_tag }}.tgz"
+      notify: Redeploy website content
+

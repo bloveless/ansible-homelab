@@ -1,6 +1,20 @@
 http:
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
   routers:
     brennonloveless:
+      entryPoints:
+        - web
+      rule: "Host(`brennonloveless.com`) || Host(`www.brennonloveless.com`)"
+      middlewares:
+        - redirect-to-https
+      service: noop@internal
+
+    brennonloveless-secure:
       entryPoints:
         - websecure
       rule: "Host(`brennonloveless.com`) || Host(`www.brennonloveless.com`)"
@@ -10,9 +24,17 @@ http:
 
     overseerr:
       entryPoints:
+        - web
+      rule: "Host(`overseerr.brennonloveless.com`)"
+      middlewares:
+        - redirect-to-https
+      service: noop@internal
+
+    overseerr-secure:
+      entryPoints:
         - websecure
       rule: "Host(`overseerr.brennonloveless.com`)"
-      service: "kubernetes"
+      service: "overseerr"
       tls:
         certResolver: "letsencrypt"
 
@@ -22,6 +44,42 @@ http:
       rule: "Host(`portainer.lan`)"
       service: "portainer"
       tls: true
+
+    radarr:
+      entryPoints:
+        - web
+      rule: "Host(`radarr.lan`)"
+      service: "radarr"
+
+    sonarr:
+      entryPoints:
+        - web
+      rule: "Host(`sonarr.lan`)"
+      service: "sonarr"
+
+    prowlarr:
+      entryPoints:
+        - web
+      rule: "Host(`prowlarr.lan`)"
+      service: "prowlarr"
+
+    nzbget:
+      entryPoints:
+        - web
+      rule: "Host(`nzbget.lan`)"
+      service: "nzbget"
+
+    qbittorrent:
+      entryPoints:
+        - web
+      rule: "Host(`qbittorrent.lan`)"
+      service: "qbittorrent"
+
+    fileflows:
+      entryPoints:
+        - web
+      rule: "Host(`fileflows.lan`)"
+      service: "fileflows"
 
   services:
     kubernetes:
@@ -39,3 +97,37 @@ http:
         servers:
           - url: "https://192.168.5.15:9443/"
 
+    overseerr:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.13:5055/"
+
+    radarr:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.13:7878/"
+
+    sonarr:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.13:8989/"
+
+    prowlarr:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.13:9696/"
+
+    nzbget:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.13:6789/"
+
+    qbittorrent:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.13:8080/"
+
+    fileflows:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.14:5000/"
