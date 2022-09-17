@@ -38,11 +38,32 @@ http:
       tls:
         certResolver: "letsencrypt"
 
-    portainer:
+    dashboard:
       entryPoints:
         - web
+      rule: "Host(`dashboard.lan`)"
+      service: "dashboard"
+
+    portainer:
+      entryPoints:
+        - websecure
       rule: "Host(`portainer.lan`)"
       service: "portainer"
+      tls: true
+
+    proxmox:
+      entryPoints:
+        - websecure
+      rule: "Host(`proxmox.lan`)"
+      service: "proxmox"
+      tls: true
+
+    nas:
+      entryPoints:
+        - websecure
+      rule: "Host(`nas.lan`)"
+      service: "nas"
+      tls: true
 
     radarr:
       entryPoints:
@@ -91,10 +112,25 @@ http:
         servers:
           - url: "http://192.168.5.103/"
 
+    dashboard:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.5.54:8080/"
+
     portainer:
       loadBalancer:
         servers:
           - url: "https://192.168.5.15:9443/"
+
+    proxmox:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.5.10:8006/"
+
+    nas:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.4.245:5001/"
 
     overseerr:
       loadBalancer:
