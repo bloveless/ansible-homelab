@@ -46,24 +46,51 @@ http:
 
     portainer:
       entryPoints:
+        - web
+      rule: "Host(`portainer.lan`)"
+      middlewares:
+        - redirect-to-https
+      service: noop@internal
+
+    portainer-secure:
+      entryPoints:
         - websecure
       rule: "Host(`portainer.lan`)"
       service: "portainer"
-      tls: true
 
     proxmox:
+      entryPoints:
+        - web
+      rule: "Host(`proxmox.lan`)"
+      middlewares:
+        - redirect-to-https
+      service: noop@internal
+
+    proxmox-secure:
       entryPoints:
         - websecure
       rule: "Host(`proxmox.lan`)"
       service: "proxmox"
-      tls: true
 
     nas:
+      entryPoints:
+        - web
+      rule: "Host(`nas.lan`)"
+      middlewares:
+        - redirect-to-https
+      service: noop@internal
+
+    nas-secure:
       entryPoints:
         - websecure
       rule: "Host(`nas.lan`)"
       service: "nas"
-      tls: true
+
+    traefik:
+      entryPoints:
+        - web
+      rule: "Host(`traefik.lan`)"
+      service: "traefik"
 
     radarr:
       entryPoints:
@@ -131,6 +158,11 @@ http:
       loadBalancer:
         servers:
           - url: "https://192.168.4.245:5001/"
+
+    traefik:
+      loadBalancer:
+        server:
+          - url: "http://192.168.5.52:8080/"
 
     overseerr:
       loadBalancer:

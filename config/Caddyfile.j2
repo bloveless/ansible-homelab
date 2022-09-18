@@ -1,0 +1,99 @@
+{
+    debug
+    email brennon.loveless@gmail.com
+}
+
+localhost {
+    tls internal
+    respond "Localhost"
+}
+
+*.brennonloveless.com {
+    tls {
+        dns cloudflare {{ cloudflare_dns_api_key }}
+    }
+
+    @www.brennonloveless.com host www.brennonloveless.com
+    redir @www.brennonloveless.com https://brennonloveless.com{url}
+
+    @overseerr.brennonloveless.com host overseerr.brennonloveless.com
+    reverse_proxy @overseerr.brennonloveless.com http://192.168.5.13:5055
+}
+
+brennonloveless.com {
+    tls {
+        dns cloudflare {{ cloudflare_dns_api_key }}
+    }
+
+    reverse_proxy http://192.168.5.103
+}
+
+http://brennonloveless.lan {
+    reverse_proxy http://192.168.5.103
+}
+
+#    kubernetes:
+#      loadBalancer:
+#        servers:
+#          - url: "http://192.168.4.225/"
+
+http://dashboard.lan {
+    reverse_proxy http://192.168.5.54:8080
+}
+
+http://portainer.lan {
+    reverse_proxy https://192.168.5.15:9443 {
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+}
+
+proxmox.lan {
+    tls internal
+    reverse_proxy https://192.168.5.10:8006 {
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+
+}
+
+http://nas.lan {
+    reverse_proxy https://192.168.4.245:5001 {
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+
+}
+
+http://overseerr.lan {
+    reverse_proxy http://192.168.5.13:5055
+}
+
+http://radarr.lan {
+    reverse_proxy http://192.168.5.13:7878
+}
+
+
+http://sonarr.lan {
+    reverse_proxy http://192.168.5.13:8989
+}
+
+http://prowlarr.lan {
+    reverse_proxy http://192.168.5.13:9696
+}
+
+http://nzbget.lan {
+    reverse_proxy http://192.168.5.13:6789
+}
+
+http://qbittorrent.lan {
+    reverse_proxy http://192.168.5.13:8080
+}
+
+http://fileflows.lan {
+    reverse_proxy http://192.168.5.14:5000
+}
+

@@ -25,13 +25,16 @@
 [brennonloveless]
 192.168.5.103 ansible_user=ansible
 
-[portainer]
+[docker]
 192.168.5.15 ansible_user=ansible
 192.168.5.54 ansible_user=ansible
 192.168.5.104 ansible_user=ansible
 
-[portainer02]
+[docker01]
+192.168.5.15 ansible_user=ansible
+
+[docker02]
 192.168.5.54 ansible_user=ansible
 
-[portainer03]
+[docker03]
 192.168.5.104 ansible_user=ansible

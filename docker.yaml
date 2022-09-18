@@ -1,0 +1,107 @@
+---
+- hosts: docker
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+
+  pre_tasks:
+    - name: Ensure dependencies are installed
+      pacman:
+        update_cache: yes
+        name:
+          - ntp
+          - docker
+          - python-pip
+          - python-setuptools
+          - python-virtualenv
+
+    - name: Ensure python docker library is installed
+      pip:
+        name: docker
+
+    - name: Ensure ntpd daemon is started and enabled
+      systemd:
+        name: ntpd
+        enabled: yes
+        state: started
+
+    - name: Ensure docker daemon is started and enabled
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+  tasks:
+    - name: Ensure docker user is created
+      user:
+        name: docker
+
+    - name: Ensure that the docker volumes directory is created
+      file:
+        path: /home/docker/volumes
+        state: directory
+
+- hosts: docker02
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+    - vars/secrets.yaml
+
+  handlers:
+    - name: Restart Caddy
+      docker_container:
+        name: caddy
+        state: started
+        restart: yes
+
+  tasks:
+
+    - name: Ensure that reverse proxy docker network is created
+      docker_network:
+        name: reverse_proxy
+
+    - name: Ensure that caddy data volume is created
+      docker_volume:
+        name: caddy_data
+
+    - name: Ensure that caddy config volume is created
+      docker_volume:
+        name: caddy_config
+
+    - name: Ensure caddyfile volume directory is created
+      file:
+        path: /home/docker/volumes/caddy
+        state: directory
+
+    - name: Ensure the caddyfile is up to date
+      template:
+        src: config/Caddyfile.j2
+        dest: /home/docker/volumes/caddy/Caddyfile
+      notify:
+        - Restart Caddy
+
+    - name: Ensure that caddy container is created
+      docker_container:
+        name: caddy
+        image: bloveless/caddy:latest
+        networks:
+          - name: reverse_proxy
+        volumes:
+          - "/home/docker/volumes/caddy/Caddyfile:/etc/caddy/Caddyfile"
+        mounts:
+          - source: caddy_data
+            target: /data
+          - source: caddy_config
+            target: /config
+        ports:
+          - "80:80"
+          - "443:443"
+          - "443:443/udp"
+
+    - name: Ensure cloudflared container is created
+      docker_container:
+        name: cloudflared
+        image: cloudflare/cloudflared:2022.9.0-amd64
+        command: "tunnel --no-autoupdate run --token {{ cloudflared_key }}"
