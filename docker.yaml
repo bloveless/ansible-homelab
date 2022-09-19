@@ -57,7 +57,6 @@
         restart: yes
 
   tasks:
-
     - name: Ensure that reverse proxy docker network is created
       docker_network:
         name: reverse_proxy
@@ -86,6 +85,7 @@
       docker_container:
         name: caddy
         image: bloveless/caddy:latest
+        restart_policy: always
         networks:
           - name: reverse_proxy
         volumes:
@@ -105,3 +105,20 @@
         name: cloudflared
         image: cloudflare/cloudflared:2022.9.0-amd64
         command: "tunnel --no-autoupdate run --token {{ cloudflared_key }}"
+        restart_policy: always
+
+    - name: Ensure that heimdall config volume is created
+      docker_volume:
+        name: heimdall
+
+    - name: Ensure that heimdall container is created
+      docker_container:
+        name: heimdall
+        image: lscr.io/linuxserver/heimdall:2.4.13
+        restart_policy: always
+        mounts:
+          - source: heimdall
+            target: /config
+        ports:
+          - "8080:80"
+
