@@ -42,6 +42,28 @@
         path: /home/docker/volumes
         state: directory
 
+- hosts: docker01
+  become: yes
+
+  tasks:
+    - name: Ensure that portainer data volume is created
+      docker_volume:
+        name: portainer_data
+
+    - name: Ensure that portainer container is created
+      docker_container:
+        name: portainer
+        image: portainer/portainer-ee:2.15.1
+        restart_policy: always
+        volumes:
+          - "/var/run/docker.sock:/var/run/docker.sock"
+        mounts:
+          - source: portainer_data
+            target: /data
+        ports:
+          - "8000:8000"
+          - "9443:9443"
+
 - hosts: docker02
   become: yes
 
