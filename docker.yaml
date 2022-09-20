@@ -106,7 +106,7 @@
     - name: Ensure that caddy container is created
       docker_container:
         name: caddy
-        image: bloveless/caddy:latest
+        image: bloveless/caddy:2.5.2-0.1.0
         restart_policy: always
         networks:
           - name: reverse_proxy
