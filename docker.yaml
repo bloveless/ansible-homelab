@@ -144,3 +144,47 @@
         ports:
           - "8080:80"
 
+- hosts: docker03
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+    - vars/secrets.yaml
+
+  handlers:
+    - name: Restart homer
+      docker_container:
+        name: homer
+        state: started
+        restart: yes
+
+  tasks:
+    - name: Ensure homer volume directory is created
+      file:
+        path: /home/docker/volumes/homer
+        state: directory
+
+    - name: Ensure the homer config is up to date
+      template:
+        src: config/homer-config.yaml.j2
+        dest: /home/docker/volumes/homer/config.yaml
+      notify:
+        - Restart homer
+
+    - name: Ensure that homer assets volume is created
+      docker_volume:
+        name: homer_assets
+
+    - name: Ensure that homer container is created
+      docker_container:
+        name: homer
+        image: b4bz/homer:v22.08.1
+        restart_policy: always
+        volumes:
+          - "/home/docker/volumes/homer/config.yaml:/assets/config.yml"
+        mounts:
+          - source: homer_assets
+            target: /assets
+        ports:
+          - "8080:8080"
+
