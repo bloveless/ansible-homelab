@@ -28,7 +28,8 @@ brennonloveless.com {
     reverse_proxy http://192.168.5.103
 }
 
-http://brennonloveless.lan {
+brennonloveless.lan {
+    tls internal
     reverse_proxy http://192.168.5.103
 }
 
@@ -37,11 +38,21 @@ http://brennonloveless.lan {
 #        servers:
 #          - url: "http://192.168.4.225/"
 
-http://dashboard.lan {
+dashboard.lan {
+    tls internal
     reverse_proxy http://192.168.5.54:8080
 }
 
-http://portainer.lan {
+caddycerts.lan {
+    tls internal
+    root * /data/caddy/pki/authorities/local
+    file_server browse {
+        hide *.key
+    }
+}
+
+portainer.lan {
+    tls internal
     reverse_proxy https://192.168.5.15:9443 {
         transport http {
             tls_insecure_skip_verify
@@ -59,7 +70,8 @@ proxmox.lan {
 
 }
 
-http://nas.lan {
+nas.lan {
+    tls internal
     reverse_proxy https://192.168.4.245:5001 {
         transport http {
             tls_insecure_skip_verify
@@ -68,32 +80,39 @@ http://nas.lan {
 
 }
 
-http://overseerr.lan {
+overseerr.lan {
+    tls internal
     reverse_proxy http://192.168.5.13:5055
 }
 
-http://radarr.lan {
+radarr.lan {
+    tls internal
     reverse_proxy http://192.168.5.13:7878
 }
 
 
-http://sonarr.lan {
+sonarr.lan {
+    tls internal
     reverse_proxy http://192.168.5.13:8989
 }
 
-http://prowlarr.lan {
+prowlarr.lan {
+    tls internal
     reverse_proxy http://192.168.5.13:9696
 }
 
-http://nzbget.lan {
+nzbget.lan {
+    tls internal
     reverse_proxy http://192.168.5.13:6789
 }
 
-http://qbittorrent.lan {
+qbittorrent.lan {
+    tls internal
     reverse_proxy http://192.168.5.13:8080
 }
 
-http://fileflows.lan {
+fileflows.lan {
+    tls internal
     reverse_proxy http://192.168.5.14:5000
 }
 

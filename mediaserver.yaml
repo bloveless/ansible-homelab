@@ -1,5 +1,5 @@
 ---
-- hosts: mediaserver_builder
+- hosts: mediaserver
 
   pre_tasks:
     - name: Ensure pacman cache is updated
@@ -165,6 +165,7 @@
     - name: Ensure the nzbget service is started and enabled
       systemd:
         name: nzbget
+        enabled: yes
         daemon_reload: yes
         state: started
 
