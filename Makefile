@@ -9,3 +9,9 @@ fileflows:
 
 brennonloveless:
 	ansible-playbook -i inventory brennonloveless.yaml
+
+docker:
+	ansible-playbook -i inventory docker.yaml
+
+monitoring:
+	ansible-playbook -i inventory monitoring.yaml

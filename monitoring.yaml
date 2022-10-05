@@ -1,0 +1,66 @@
+---
+- hosts: monitoring
+  become: yes
+
+  pre_tasks:
+    - name: Ensure pacman cache is updated
+      become: yes
+      pacman:
+        update_cache: yes
+
+  roles:
+    - role: jahrik.yay
+      install: true
+
+  tasks:
+    - name: Ensure dependencies are installed
+      pacman:
+        name:
+          - grafana
+          # - influxdb # This doesn't work in LXC
+          - prometheus
+          - rpcbind
+          - nfs-utils
+          - ntp
+        state: present
+
+    - name: Ensure ntpd daemon is started and enabled
+      systemd:
+        name: ntpd
+        enabled: yes
+        state: started
+
+    - name: Ensure grafana daemon is started and enabled
+      systemd:
+        name: grafana
+        enabled: yes
+        state: started
+
+    - name: Ensure prometheus daemon is started and enabled
+      systemd:
+        name: prometheus
+        enabled: yes
+        state: started
+
+    # This doesn't work in LXC by default
+    # - name: Ensure influxdb daemon is started and enabled
+    #   systemd:
+    #     name: influxdb
+    #     enabled: yes
+    #     state: started
+
+        
+    # Not quite ready for this yet but when it comes to backups I'll want them to go to NFS
+    # - name: Ensure that the media mount directory exists
+    #   file:
+    #     state: directory
+    #     path: /mnt/media
+
+    # - name: Ensure that the media NFS is mounted
+    #   mount:
+    #     src: 192.168.4.245:/volume1/k8s/media-server
+    #     path: /mnt/media
+    #     opts: rw,sync,hard,nfsvers=4.1
+    #     state: mounted
+    #     fstype: nfs
+

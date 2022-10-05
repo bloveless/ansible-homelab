@@ -116,3 +116,13 @@ fileflows.lan {
     reverse_proxy http://192.168.5.14:5000
 }
 
+grafana.lan {
+    tls internal
+    reverse_proxy http://192.168.5.105:3000
+}
+
+prometheus.lan {
+    tls internal
+    reverse_proxy http://192.168.5.105:9090
+}
+
