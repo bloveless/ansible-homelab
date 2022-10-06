@@ -12,6 +12,12 @@
     - role: jahrik.yay
       install: true
 
+  handlers:
+    - name: Restart prometheus
+      systemd:
+        name: prometheus
+        state: restarted
+
   tasks:
     - name: Include prometheus node exporter
       include_tasks: shared_tasks/prometheus_node_exporter.yaml
@@ -39,11 +45,19 @@
         enabled: yes
         state: started
 
+    - name: Ensure prometheus config is updated
+      copy:
+        src: config/prometheus.yaml
+        dest: /etc/prometheus/prometheus.yml
+      notify:
+        - Restart prometheus
+
     - name: Ensure prometheus daemon is started and enabled
       systemd:
         name: prometheus
         enabled: yes
         state: started
+
 
     # This doesn't work in LXC by default
     # - name: Ensure influxdb daemon is started and enabled
