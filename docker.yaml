@@ -128,9 +128,13 @@
     - name: Ensure cloudflared container is created
       docker_container:
         name: cloudflared
-        image: cloudflare/cloudflared:2022.9.0-amd64
-        command: "tunnel --no-autoupdate run --token {{ cloudflared_key }}"
+        image: cloudflare/cloudflared:2022.10.0-amd64
+        command: "tunnel --metrics 0.0.0.0:8099 run --token {{ cloudflared_key }}"
         restart_policy: always
+        ports:
+          - "8099:8099"
+        networks:
+          - name: reverse_proxy
 
     - name: Ensure that heimdall config volume is created
       docker_volume:
