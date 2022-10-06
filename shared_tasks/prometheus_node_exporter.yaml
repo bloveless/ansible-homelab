@@ -1,0 +1,12 @@
+---
+- name: Install prometheus node exporter
+  pacman:
+    name: prometheus-node-exporter
+    state: present
+
+- name: Ensure prometheus node exporter is running and started
+  systemd:
+    name: prometheus-node-exporter
+    enabled: yes
+    state: started
+

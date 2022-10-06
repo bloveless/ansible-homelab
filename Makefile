@@ -1,5 +1,4 @@
-traefik:
-	ansible-playbook -i inventory traefik.yaml
+all: mediaserver fileflows brennonloveless docker monitoring
 
 mediaserver:
 	ansible-playbook -i inventory mediaserver.yaml

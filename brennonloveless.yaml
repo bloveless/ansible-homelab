@@ -44,6 +44,9 @@
       listen: Redeploy website content
 
   tasks:
+    - name: Include prometheus node exporter
+      include_tasks: shared_tasks/prometheus_node_exporter.yaml
+
     - name: Ensure website content is downloaded
       get_url:
         url: "{{ brennonloveless_download_url }}"

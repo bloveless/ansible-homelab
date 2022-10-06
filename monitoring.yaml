@@ -13,6 +13,9 @@
       install: true
 
   tasks:
+    - name: Include prometheus node exporter
+      include_tasks: shared_tasks/prometheus_node_exporter.yaml
+
     - name: Ensure dependencies are installed
       pacman:
         name:

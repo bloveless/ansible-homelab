@@ -105,6 +105,9 @@
         fstype: nfs
 
   tasks:
+    - name: Include prometheus node exporter
+      include_tasks: shared_tasks/prometheus_node_exporter.yaml
+
     - name: Ensure wireguard config is present
       copy:
         content: "{{ wireguard_config }}"

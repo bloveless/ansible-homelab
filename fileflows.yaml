@@ -5,7 +5,10 @@
   vars_files:
     - vars/main.yaml
 
-  pre_tasks:
+  tasks:
+    - name: Include prometheus node exporter
+      include_tasks: shared_tasks/prometheus_node_exporter.yaml
+
     - name: Ensure dependencies are installed
       pacman:
         update_cache: yes
@@ -46,6 +49,17 @@
         opts: rw,sync,hard,nfsvers=4.1
         state: mounted
         fstype: nfs
+
+    - name: Ensure that the media group exists
+      group:
+        name: media
+
+    - name: Ensure that the fileflows user exists
+      user:
+        name: fileflows
+        append: yes
+        groups:
+          - media
 
     - name: Ensure that the fileflows directory exists
       file:
@@ -89,6 +103,7 @@
     - name: Ensure that the fileflows server docker container is running
       docker_container:
         name: fileflows01
+        hostname: fileflows01
         image: "revenz/fileflows:{{ fileflows_tag }}"
         ports:
           - 5000:5000
@@ -112,6 +127,7 @@
     - name: Ensure that the fileflows node docker container is running
       docker_container:
         name: fileflows02
+        hostname: fileflows02
         image: "revenz/fileflows:{{ fileflows_tag }}"
         env:
           FFNODE: "1"

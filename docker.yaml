@@ -33,6 +33,9 @@
         state: started
 
   tasks:
+    - name: Include prometheus node exporter
+      include_tasks: shared_tasks/prometheus_node_exporter.yaml
+
     - name: Ensure docker user is created
       user:
         name: docker
