@@ -191,21 +191,6 @@
         networks:
           - name: reverse_proxy
 
-    - name: Ensure that heimdall config volume is created
-      docker_volume:
-        name: heimdall
-
-    - name: Ensure that heimdall container is created
-      docker_container:
-        name: heimdall
-        image: lscr.io/linuxserver/heimdall:2.4.13
-        restart_policy: always
-        mounts:
-          - source: heimdall
-            target: /config
-        ports:
-          - "8080:80"
-
     - name: Ensure that fenrus data volume is created
       docker_volume:
         name: fenrus_data
