@@ -10,6 +10,8 @@
       pacman:
         update_cache: yes
         name:
+          - rpcbind
+          - nfs-utils
           - ntp
           - docker
           - python-pip
@@ -44,11 +46,24 @@
       file:
         path: /home/docker/volumes
         state: directory
+        owner: docker
+        group: users
 
 - hosts: docker01
   become: yes
 
+  vars_files:
+    - vars/main.yaml
+
   tasks:
+    - name: Ensure that the media NFS is mounted
+      mount:
+        src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
+        path: /mnt/media
+        opts: rw,sync,hard,nfsvers=4.1
+        state: mounted
+        fstype: nfs
+
     - name: Ensure that portainer data volume is created
       docker_volume:
         name: portainer_data
@@ -66,6 +81,43 @@
         ports:
           - "8000:8000"
           - "9443:9443"
+
+    - name: Ensure that the fileflows volume Data directory exists
+      file:
+        path: /home/docker/volumes/fileflows/Data
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the fileflows volume Logs directory exists
+      file:
+        path: /home/docker/volumes/fileflows/Logs
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the fileflows volume Temp directory exists
+      file:
+        path: /home/docker/volumes/fileflows/Temp
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the fileflows server docker container is running
+      docker_container:
+        name: fileflows01
+        hostname: fileflows01
+        image: "revenz/fileflows:{{ fileflows_tag }}"
+        ports:
+          - 5000:5000
+        volumes:
+          - /home/docker/volumes/fileflows/Data:/app/Data
+          - /home/docker/volumes/fileflows/Logs:/app/Logs
+          - /home/docker/volumes/fileflows/Temp:/app/Temp
+          - /mnt/media:/mnt/media
+        devices:
+          - /dev/dri:/dev/dri
+        restart_policy: unless-stopped
 
 - hosts: docker02
   become: yes
@@ -98,6 +150,8 @@
       file:
         path: /home/docker/volumes/caddy
         state: directory
+        owner: docker
+        group: users
 
     - name: Ensure the caddyfile is up to date
       template:
@@ -124,6 +178,7 @@
           - "80:80"
           - "443:443"
           - "443:443/udp"
+          - "8090:8090"
 
     - name: Ensure cloudflared container is created
       docker_container:
@@ -151,6 +206,30 @@
         ports:
           - "8080:80"
 
+    - name: Ensure that fenrus data volume is created
+      docker_volume:
+        name: fenrus_data
+
+    - name: Ensure that fenrus images volume is created
+      docker_volume:
+        name: fenrus_images
+
+    - name: Ensure that fenrus container is created
+      docker_container:
+        name: fenrus
+        image: revenz/fenrus:latest
+        pull: true
+        restart_policy: always
+        env:
+          TZ: America/Los_Angeles
+        mounts:
+          - source: fenrus_data
+            target: /app/data
+          - source: fenrus_images
+            target: /app/wwwroot/images
+        ports:
+          - "3000:3000"
+
 - hosts: docker03
   become: yes
 
@@ -166,10 +245,20 @@
         restart: yes
 
   tasks:
+    - name: Ensure that the media NFS is mounted
+      mount:
+        src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
+        path: /mnt/media
+        opts: rw,sync,hard,nfsvers=4.1
+        state: mounted
+        fstype: nfs
+
     - name: Ensure homer volume directory is created
       file:
         path: /home/docker/volumes/homer
         state: directory
+        owner: docker
+        group: users
 
     - name: Ensure the homer config is up to date
       template:
@@ -194,4 +283,60 @@
             target: /assets
         ports:
           - "8080:8080"
+
+    - name: Ensure trilium data directory is created
+      file:
+        path: /home/docker/volumes/trilium/data
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that trilium container is created
+      docker_container:
+        name: trilium
+        image: zadam/trilium:0.55.1
+        volumes:
+          - "/home/docker/volumes/trilium/data:/home/node/trilium-data"
+        ports:
+          - "8081:8080"
+
+    - name: Ensure that the fileflows volume Data directory exists
+      file:
+        path: /home/docker/volumes/fileflows/Data
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the fileflows volume Logs directory exists
+      file:
+        path: /home/docker/volumes/fileflows/Logs
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the fileflows volume Temp directory exists
+      file:
+        path: /home/docker/volumes/fileflows/Temp
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the fileflows node docker container is running
+      docker_container:
+        name: fileflows02
+        hostname: fileflows02
+        image: "revenz/fileflows:{{ fileflows_tag }}"
+        env:
+          FFNODE: "1"
+          ServerUrl: "http://{{ fileflows_server_address }}"
+        ports:
+          - 5000:5000
+        volumes:
+          - /home/docker/volumes/fileflows/Data:/app/Data
+          - /home/docker/volumes/fileflows/Logs:/app/Logs
+          - /home/docker/volumes/fileflows/Temp:/app/Temp
+          - /mnt/media:/mnt/media
+        devices:
+          - /dev/dri:/dev/dri
+        restart_policy: unless-stopped
 

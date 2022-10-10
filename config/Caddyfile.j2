@@ -1,128 +1,134 @@
+# vim: set ts=4 sw=4 tw=4 noet :
 {
-    debug
-    email brennon.loveless@gmail.com
+	debug
+	email brennon.loveless@gmail.com
 }
 
 localhost {
-    tls internal
-    respond "Localhost"
+	tls internal
+	respond "Localhost"
+}
+
+:8090 {
+	metrics /metrics
 }
 
 *.brennonloveless.com {
-    tls {
-        dns cloudflare {{ cloudflare_dns_api_key }}
-    }
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
 
-    @www.brennonloveless.com host www.brennonloveless.com
-    redir @www.brennonloveless.com https://brennonloveless.com{url}
+	@www.brennonloveless.com host www.brennonloveless.com
+	redir @www.brennonloveless.com https://brennonloveless.com{url}
 
-    @overseerr.brennonloveless.com host overseerr.brennonloveless.com
-    reverse_proxy @overseerr.brennonloveless.com http://192.168.5.13:5055
+	@overseerr.brennonloveless.com host overseerr.brennonloveless.com
+	reverse_proxy @overseerr.brennonloveless.com http://192.168.5.13:5055
 }
 
 brennonloveless.com {
-    tls {
-        dns cloudflare {{ cloudflare_dns_api_key }}
-    }
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
 
-    reverse_proxy http://192.168.5.103
+	reverse_proxy http://192.168.5.103
 }
 
 brennonloveless.lan {
-    tls internal
-    reverse_proxy http://192.168.5.103
+	tls internal
+	reverse_proxy http://192.168.5.103
 }
 
-#    kubernetes:
-#      loadBalancer:
-#        servers:
-#          - url: "http://192.168.4.225/"
-
 dashboard.lan {
-    tls internal
-    reverse_proxy http://192.168.5.54:8080
+	tls internal
+	reverse_proxy http://192.168.5.54:8080
 }
 
 caddycerts.lan {
-    tls internal
-    root * /data/caddy/pki/authorities/local
-    file_server browse {
-        hide *.key
-    }
+	tls internal
+	root * /data/caddy/pki/authorities/local
+	file_server browse {
+		hide *.key
+	}
 }
 
 portainer.lan {
-    tls internal
-    reverse_proxy https://192.168.5.15:9443 {
-        transport http {
-            tls_insecure_skip_verify
-        }
-    }
+	tls internal
+	reverse_proxy https://192.168.5.15:9443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
 }
 
 proxmox.lan {
-    tls internal
-    reverse_proxy https://192.168.5.10:8006 {
-        transport http {
-            tls_insecure_skip_verify
-        }
-    }
-
+	tls internal
+	reverse_proxy https://192.168.5.10:8006 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
 }
 
 nas.lan {
-    tls internal
-    reverse_proxy https://192.168.4.245:5001 {
-        transport http {
-            tls_insecure_skip_verify
-        }
-    }
-
+	tls internal
+	reverse_proxy https://192.168.4.245:5001 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
 }
 
 overseerr.lan {
-    tls internal
-    reverse_proxy http://192.168.5.13:5055
+	tls internal
+	reverse_proxy http://192.168.5.13:5055
 }
 
 radarr.lan {
-    tls internal
-    reverse_proxy http://192.168.5.13:7878
+	tls internal
+	reverse_proxy http://192.168.5.13:7878
 }
 
-
 sonarr.lan {
-    tls internal
-    reverse_proxy http://192.168.5.13:8989
+	tls internal
+	reverse_proxy http://192.168.5.13:8989
 }
 
 prowlarr.lan {
-    tls internal
-    reverse_proxy http://192.168.5.13:9696
+	tls internal
+	reverse_proxy http://192.168.5.13:9696
 }
 
 nzbget.lan {
-    tls internal
-    reverse_proxy http://192.168.5.13:6789
+	tls internal
+	reverse_proxy http://192.168.5.13:6789
 }
 
 qbittorrent.lan {
-    tls internal
-    reverse_proxy http://192.168.5.13:8080
+	tls internal
+	reverse_proxy http://192.168.5.13:8080
 }
 
 fileflows.lan {
-    tls internal
-    reverse_proxy http://192.168.5.14:5000
+	tls internal
+	reverse_proxy http://192.168.5.15:5000
 }
 
 grafana.lan {
-    tls internal
-    reverse_proxy http://192.168.5.105:3000
+	tls internal
+	reverse_proxy http://192.168.5.105:3000
 }
 
 prometheus.lan {
-    tls internal
-    reverse_proxy http://192.168.5.105:9090
+	tls internal
+	reverse_proxy http://192.168.5.105:9090
 }
 
+notes.lan {
+	tls internal
+	reverse_proxy http://192.168.5.104:8081
+}
+
+fenrus.lan {
+	tls internal
+	reverse_proxy http://192.168.5.54:3000
+}

@@ -76,3 +76,6 @@ scrape_configs:
     static_configs:
       - targets: ["192.168.5.54:8099"]
 
+  - job_name: "caddy"
+    static_configs:
+      - targets: ["192.168.5.54:8090"]
