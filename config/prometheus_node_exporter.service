@@ -1,0 +1,16 @@
+[Unit]
+Description=Prometheus Node Exporter Daemon
+After=syslog.target network.target
+[Service]
+User=root
+Group=root
+Type=simple
+
+ExecStart=/opt/node_exporter/node_exporter
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

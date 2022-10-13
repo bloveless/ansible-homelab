@@ -1,12 +1,40 @@
 ---
-- name: Install prometheus node exporter
-  pacman:
+- name: Ensure prometheus node exporter is not installed from package repo
+  package:
     name: prometheus-node-exporter
-    state: present
+    state: absent
 
-- name: Ensure prometheus node exporter is running and started
+- name: Ensure prometheus node exporter is downloaded
+  get_url:
+    url: https://github.com/prometheus/node_exporter/releases/download/v1.4.0/node_exporter-1.4.0.linux-amd64.tar.gz
+    dest: /opt/node_exporter-1.4.0.tgz
+    checksum: sha256:e77ff1b0a824a4e13f82a35d98595fe526849c09e3480d0789a56b72242d2abc
+
+- name: Ensure prometheus node exporter directory exists
+  file:
+    state: directory
+    path: /opt/node_exporter
+
+- name: Ensure prometheus node exporter is extracted
+  unarchive:
+    remote_src: yes
+    src: /opt/node_exporter-1.4.0.tgz
+    dest: /opt/node_exporter
+    # skip the top level directory of the tgz file
+    extra_opts: [--strip-components=1]
+    creates: /opt/node_exporter/node_exporter
+
+- name: Install prometheus node exporter service
+  copy:
+    src: config/prometheus_node_exporter.service
+    dest: /etc/systemd/system/prometheus-node-exporter.service
+    group: root
+    owner: root
+
+- name: Ensure prometheus node exporter is running and restarted
   systemd:
+    daemon_reload: yes
     name: prometheus-node-exporter
     enabled: yes
-    state: started
+    state: restarted
 
