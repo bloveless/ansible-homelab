@@ -1,4 +1,4 @@
-all: mediaserver fileflows brennonloveless docker monitoring
+all: mediaserver fileflows brennonloveless docker monitoring pihole
 
 mediaserver:
 	ansible-playbook -i inventory mediaserver.yaml
@@ -14,3 +14,6 @@ docker:
 
 monitoring:
 	ansible-playbook -i inventory monitoring.yaml
+
+pihole:
+	ansible-playbook -i inventory pihole.yaml

@@ -1,0 +1,89 @@
+---
+- hosts: pihole
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+    - vars/secrets.yaml
+
+  handlers:
+    - name: Restart Keepalived
+      systemd:
+        name: keepalived
+        state: restarted
+
+  pre_tasks:
+    - name: Ensure dependencies are installed
+      dnf:
+        update_cache: yes
+        name:
+          - keepalived
+          - ipset
+
+    - name: Ensure chronyd is uninstalled
+      dnf:
+        name: chrony
+        state: absent
+
+  tasks:
+    - name: Ensure pihole config directory exists
+      file:
+        path: /etc/pihole
+        state: directory
+        owner: root
+        group: root
+
+    - name: Ensure setupVars.conf exists
+      template:
+        src: config/piholeSetupVars.conf.j2
+        dest: /etc/pihole/setupVars.conf
+        owner: root
+        group: root
+
+    - name: Copy pihole01.j2 keepalived config to pihole01
+      template:
+        src: config/keepalived/pihole01.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+      when: ansible_hostname == "pihole01"
+
+    - name: Copy pihole02.j2 keepalived config to pihole02
+      template:
+        src: config/keepalived/pihole02.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+      when: ansible_hostname == "pihole02"
+
+    - name: Ensure keepalived daemon is started and enabled
+      systemd:
+        name: keepalived
+        enabled: yes
+        state: started
+
+    - name: Ensure pihole installer is downloaded
+      get_url:
+        url: https://install.pi-hole.net
+        dest: /opt/pihole-install.sh
+        mode: u+rwx
+
+    - name: Ensure pihole is installed
+      command:
+        cmd: /opt/pihole-install.sh --unattended
+        creates: /usr/local/bin/pihole
+
+    - name: Ensure gravity-sync.sh exists
+      get_url:
+        url: https://gravity.vmstan.com
+        dest: /opt/gravity-sync-install.sh
+        mode: u+rwx
+
+    - name: Ensure gravity sync is installed
+      command:
+        cmd: /opt/gravity-sync-install.sh
+
+    # TODO: Gravity sync is only downloaded but it isn't actually installed
+    #       You must log into pihole01 and run `gravity-sync config` followed by `gravity-sync auto`
+    #       as root in order to complete the installation
+

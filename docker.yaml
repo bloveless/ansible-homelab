@@ -17,6 +17,8 @@
           - python-pip
           - python-setuptools
           - python-virtualenv
+          - keepalived
+          - ipset
 
     - name: Ensure python docker library is installed
       pip:
@@ -54,8 +56,28 @@
 
   vars_files:
     - vars/main.yaml
+    - vars/secrets.yaml
+
+  handlers:
+    - name: Restart Keepalived
+      systemd:
+        name: keepalived
+        state: restarted
 
   tasks:
+    - name: Ensure that the keepalived config is updated
+      template:
+        src: config/keepalived/docker01.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+
+    - name: Ensure keepalived daemon is started and enabled
+      systemd:
+        name: keepalived
+        enabled: yes
+        state: started
+
     - name: Ensure that the media NFS is mounted
       mount:
         src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
@@ -133,7 +155,25 @@
         state: started
         restart: yes
 
+    - name: Restart Keepalived
+      systemd:
+        name: keepalived
+        state: restarted
+
   tasks:
+    - name: Ensure that the keepalived config is updated
+      template:
+        src: config/keepalived/docker02.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+
+    - name: Ensure keepalived daemon is started and enabled
+      systemd:
+        name: keepalived
+        enabled: yes
+        state: started
+
     - name: Ensure that reverse proxy docker network is created
       docker_network:
         name: reverse_proxy
@@ -229,7 +269,25 @@
         state: started
         restart: yes
 
+    - name: Restart Keepalived
+      systemd:
+        name: keepalived
+        state: restarted
+
   tasks:
+    - name: Ensure that the keepalived config is updated
+      template:
+        src: config/keepalived/docker03.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+
+    - name: Ensure keepalived daemon is started and enabled
+      systemd:
+        name: keepalived
+        enabled: yes
+        state: started
+
     - name: Ensure that the media NFS is mounted
       mount:
         src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
