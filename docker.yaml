@@ -263,12 +263,6 @@
     - vars/secrets.yaml
 
   handlers:
-    - name: Restart homer
-      docker_container:
-        name: homer
-        state: started
-        restart: yes
-
     - name: Restart Keepalived
       systemd:
         name: keepalived
@@ -296,52 +290,20 @@
         state: mounted
         fstype: nfs
 
-    - name: Ensure homer volume directory is created
-      file:
-        path: /home/docker/volumes/homer
-        state: directory
-        owner: docker
-        group: users
-
-    - name: Ensure the homer config is up to date
-      template:
-        src: config/homer-config.yaml.j2
-        dest: /home/docker/volumes/homer/config.yaml
-      notify:
-        - Restart homer
-
-    - name: Ensure that homer assets volume is created
+    - name: Ensure that tiddlywiki volume is created
       docker_volume:
-        name: homer_assets
+        name: tiddlywiki
 
-    - name: Ensure that homer container is created
+    - name: Ensure that tiddlywiki container is created
       docker_container:
-        name: homer
-        image: b4bz/homer:v22.08.1
+        name: tiddlywiki
+        image: bloveless/tiddlywiki:5.2.3-0.1.0
         restart_policy: always
-        volumes:
-          - "/home/docker/volumes/homer/config.yaml:/assets/config.yml"
         mounts:
-          - source: homer_assets
-            target: /assets
+          - source: tiddlywiki
+            target: /tiddlywiki
         ports:
           - "8080:8080"
-
-    - name: Ensure trilium data directory is created
-      file:
-        path: /home/docker/volumes/trilium/data
-        state: directory
-        owner: docker
-        group: users
-
-    - name: Ensure that trilium container is created
-      docker_container:
-        name: trilium
-        image: zadam/trilium:0.55.1
-        volumes:
-          - "/home/docker/volumes/trilium/data:/home/node/trilium-data"
-        ports:
-          - "8081:8080"
 
     - name: Ensure that the fileflows volume Data directory exists
       file:
@@ -381,5 +343,13 @@
           - /mnt/media:/mnt/media
         devices:
           - /dev/dri:/dev/dri
+        restart_policy: unless-stopped
+
+    - name: Ensure that homelab exporter container is running
+      docker_container:
+        name: homelab-exporter
+        image: bloveless/homelab-exporter:0.1.0
+        ports:
+          - 2112:8080
         restart_policy: unless-stopped
 

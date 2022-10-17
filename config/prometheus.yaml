@@ -80,3 +80,6 @@ scrape_configs:
     static_configs:
       - targets: ["192.168.5.55:9100"]
 
+  - job_name: "homelab-exporter"
+    static_configs:
+      - targets: ["192.168.5.104:2112"]

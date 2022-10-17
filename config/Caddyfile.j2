@@ -125,7 +125,7 @@ prometheus.lan {
 
 notes.lan {
 	tls internal
-	reverse_proxy http://192.168.5.104:8081
+	reverse_proxy http://192.168.5.104:8080
 }
 
 pihole.lan {
@@ -136,4 +136,9 @@ pihole.lan {
 pihole02.lan {
 	tls internal
 	reverse_proxy http://192.168.5.55
+}
+
+code.lan {
+	tls internal
+	reverse_proxy http://192.168.5.54:8443
 }
