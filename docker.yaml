@@ -86,9 +86,12 @@
         state: mounted
         fstype: nfs
 
-    - name: Ensure that portainer data volume is created
-      docker_volume:
-        name: portainer_data
+    - name: Ensure that the portainer data directory exists
+      file:
+        path: /mnt/docker/volumes/portainer/data
+        state: directory
+        owner: docker
+        group: users
 
     - name: Ensure that portainer container is created
       docker_container:
@@ -97,30 +100,28 @@
         restart_policy: always
         volumes:
           - "/var/run/docker.sock:/var/run/docker.sock"
-        mounts:
-          - source: portainer_data
-            target: /data
+          - "/mnt/docker/volumes/portainer/data:/data"
         ports:
           - "8000:8000"
           - "9443:9443"
 
     - name: Ensure that the fileflows volume Data directory exists
       file:
-        path: /home/docker/volumes/fileflows/Data
+        path: /mnt/docker/volumes/fileflows/Data
         state: directory
         owner: docker
         group: users
 
     - name: Ensure that the fileflows volume Logs directory exists
       file:
-        path: /home/docker/volumes/fileflows/Logs
+        path: /mnt/docker/volumes/fileflows/Logs
         state: directory
         owner: docker
         group: users
 
     - name: Ensure that the fileflows volume Temp directory exists
       file:
-        path: /home/docker/volumes/fileflows/Temp
+        path: /mnt/docker/volumes/fileflows/Temp
         state: directory
         owner: docker
         group: users
@@ -133,9 +134,9 @@
         ports:
           - 5000:5000
         volumes:
-          - /home/docker/volumes/fileflows/Data:/app/Data
-          - /home/docker/volumes/fileflows/Logs:/app/Logs
-          - /home/docker/volumes/fileflows/Temp:/app/Temp
+          - /mnt/docker/volumes/fileflows/Data:/app/Data
+          - /mnt/docker/volumes/fileflows/Logs:/app/Logs
+          - /mnt/docker/volumes/fileflows/Temp:/app/Temp
           - /mnt/media:/mnt/media
         devices:
           - /dev/dri:/dev/dri
@@ -178,17 +179,16 @@
       docker_network:
         name: reverse_proxy
 
-    - name: Ensure that caddy data volume is created
-      docker_volume:
-        name: caddy_data
-
-    - name: Ensure that caddy config volume is created
-      docker_volume:
-        name: caddy_config
-
-    - name: Ensure caddyfile volume directory is created
+    - name: Ensure that the caddy data directory exists
       file:
-        path: /home/docker/volumes/caddy
+        path: /mnt/docker/volumes/caddy/data
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the caddy config directory exists
+      file:
+        path: /mnt/docker/volumes/caddy/config
         state: directory
         owner: docker
         group: users
@@ -196,7 +196,7 @@
     - name: Ensure the caddyfile is up to date
       template:
         src: config/Caddyfile.j2
-        dest: /home/docker/volumes/caddy/Caddyfile
+        dest: /mnt/docker/volumes/caddy/Caddyfile
       notify:
         - Restart Caddy
 
@@ -208,12 +208,9 @@
         networks:
           - name: reverse_proxy
         volumes:
-          - "/home/docker/volumes/caddy/Caddyfile:/etc/caddy/Caddyfile"
-        mounts:
-          - source: caddy_data
-            target: /data
-          - source: caddy_config
-            target: /config
+          - "/mnt/docker/volumes/caddy/Caddyfile:/etc/caddy/Caddyfile"
+          - "/mnt/docker/volumes/caddy/data:/data"
+          - "/mnt/docker/volumes/caddy/config:/config"
         ports:
           - "80:80"
           - "443:443"
@@ -231,13 +228,19 @@
         networks:
           - name: reverse_proxy
 
-    - name: Ensure that fenrus data volume is created
-      docker_volume:
-        name: fenrus_data
+    - name: Ensure that the fenrus data directory exists
+      file:
+        path: /mnt/docker/volumes/fenrus/data
+        state: directory
+        owner: docker
+        group: users
 
-    - name: Ensure that fenrus images volume is created
-      docker_volume:
-        name: fenrus_images
+    - name: Ensure that the fenrus images directory exists
+      file:
+        path: /mnt/docker/volumes/fenrus/images
+        state: directory
+        owner: docker
+        group: users
 
     - name: Ensure that fenrus container is created
       docker_container:
@@ -247,11 +250,9 @@
         restart_policy: always
         env:
           TZ: America/Los_Angeles
-        mounts:
-          - source: fenrus_data
-            target: /app/data
-          - source: fenrus_images
-            target: /app/wwwroot/images
+        volumes:
+          - "/mnt/docker/volumes/fenrus/data:/app/data"
+          - "/mnt/docker/volumes/fenrus/images:/app/wwwroot/images"
         ports:
           - "3000:3000"
 
@@ -290,38 +291,40 @@
         state: mounted
         fstype: nfs
 
-    - name: Ensure that tiddlywiki volume is created
-      docker_volume:
-        name: tiddlywiki
+    - name: Ensure that the tiddlywiki volume directory exists
+      file:
+        path: /mnt/docker/volumes/tiddlywiki/data
+        state: directory
+        owner: docker
+        group: users
 
     - name: Ensure that tiddlywiki container is created
       docker_container:
         name: tiddlywiki
         image: bloveless/tiddlywiki:5.2.3-0.1.0
         restart_policy: always
-        mounts:
-          - source: tiddlywiki
-            target: /tiddlywiki
+        volumes:
+          - "/mnt/docker/volumes/tiddlywiki/data:/tiddlywiki"
         ports:
           - "8080:8080"
 
     - name: Ensure that the fileflows volume Data directory exists
       file:
-        path: /home/docker/volumes/fileflows/Data
+        path: /mnt/docker/volumes/fileflows/Data
         state: directory
         owner: docker
         group: users
 
     - name: Ensure that the fileflows volume Logs directory exists
       file:
-        path: /home/docker/volumes/fileflows/Logs
+        path: /mnt/docker/volumes/fileflows/Logs
         state: directory
         owner: docker
         group: users
 
     - name: Ensure that the fileflows volume Temp directory exists
       file:
-        path: /home/docker/volumes/fileflows/Temp
+        path: /mnt/docker/volumes/fileflows/Temp
         state: directory
         owner: docker
         group: users
@@ -337,9 +340,9 @@
         ports:
           - 5000:5000
         volumes:
-          - /home/docker/volumes/fileflows/Data:/app/Data
-          - /home/docker/volumes/fileflows/Logs:/app/Logs
-          - /home/docker/volumes/fileflows/Temp:/app/Temp
+          - /mnt/docker/volumes/fileflows/Data:/app/Data
+          - /mnt/docker/volumes/fileflows/Logs:/app/Logs
+          - /mnt/docker/volumes/fileflows/Temp:/app/Temp
           - /mnt/media:/mnt/media
         devices:
           - /dev/dri:/dev/dri
