@@ -5,28 +5,63 @@
   vars_files:
     - vars/main.yaml
 
-  pre_tasks:
+  handlers:
+    - name: Reboot
+      reboot:
+
+  tasks:
+    - name: Ensure gpg keys are available
+      dnf:
+        update_cache: yes
+        name:
+          - distribution-gpg-keys
+
+    - name: Import gpg keys for free and nonfree
+      shell:
+        cmd: |
+          rpmkeys --import /usr/share/distribution-gpg-keys/rpmfusion/RPM-GPG-KEY-rpmfusion-free-fedora-{{ansible_distribution_major_version}}
+          rpmkeys --import /usr/share/distribution-gpg-keys/rpmfusion/RPM-GPG-KEY-rpmfusion-nonfree-fedora-{{ansible_distribution_major_version}}
+
+    - name: Enable the RPM Fusion free repository
+      dnf:
+        name: "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm"
+        state: present
+
+    - name: Enable the RPM Fusion nonfree repository
+      dnf:
+        name: "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm"
+        state: present
+
     - name: Ensure dependencies are installed
-      pacman:
+      dnf:
         update_cache: yes
         name:
           - rpcbind
           - nfs-utils
-          - ntp
           - docker
           - python-pip
           - python-setuptools
           - python-virtualenv
+          - qemu-guest-agent
           - keepalived
           - ipset
+          - libva-utils
+          - intel-media-driver
 
     - name: Ensure python docker library is installed
       pip:
         name: docker
 
-    - name: Ensure ntpd daemon is started and enabled
+    - name: Ensure qemu-guest-agent daemon is started and enabled
       systemd:
-        name: ntpd
+        name: chronyd
+        enabled: yes
+        state: started
+
+
+    - name: Ensure chronyd daemon is started and enabled
+      systemd:
+        name: chronyd
         enabled: yes
         state: started
 
@@ -36,20 +71,34 @@
         enabled: yes
         state: started
 
-  tasks:
+    - name: Give docker access to the docker volumes via SELinux
+      command:
+        cmd: chcon -Rt svirt_sandbox_file_t /mnt/docker
+
+    - name: Give docker access to the docker socket via SELinux
+      shell:
+        cmd: |
+          echo "Downloading docker socket policy"
+          rpm-ostree install policycoreutils-python-utils
+          echo "Need reboot"
+          # need to reboot
+
+          curl https://raw.githubusercontent.com/dpw/selinux-dockersock/master/dockersock.te -o /opt/dockersock.te
+
+          echo "Applying policy to system"
+          checkmodule -M -m -o dockersock.mod /opt/dockersock.te
+          semodule_package -o dockersock.pp -m dockersock.mod
+          sudo semodule -i dockersock.pp
+        creates: /opt/dockersock.te
+      notify:
+        - Reboot
+
     - name: Include prometheus node exporter
       include_tasks: shared_tasks/prometheus_node_exporter.yaml
 
     - name: Ensure docker user is created
       user:
         name: docker
-
-    - name: Ensure that the docker volumes directory is created
-      file:
-        path: /home/docker/volumes
-        state: directory
-        owner: docker
-        group: users
 
 - hosts: docker01
   become: yes
@@ -105,43 +154,6 @@
           - "8000:8000"
           - "9443:9443"
 
-    - name: Ensure that the fileflows volume Data directory exists
-      file:
-        path: /mnt/docker/volumes/fileflows/Data
-        state: directory
-        owner: docker
-        group: users
-
-    - name: Ensure that the fileflows volume Logs directory exists
-      file:
-        path: /mnt/docker/volumes/fileflows/Logs
-        state: directory
-        owner: docker
-        group: users
-
-    - name: Ensure that the fileflows volume Temp directory exists
-      file:
-        path: /mnt/docker/volumes/fileflows/Temp
-        state: directory
-        owner: docker
-        group: users
-
-    - name: Ensure that the fileflows server docker container is running
-      docker_container:
-        name: fileflows01
-        hostname: fileflows01
-        image: "revenz/fileflows:{{ fileflows_tag }}"
-        ports:
-          - 5000:5000
-        volumes:
-          - /mnt/docker/volumes/fileflows/Data:/app/Data
-          - /mnt/docker/volumes/fileflows/Logs:/app/Logs
-          - /mnt/docker/volumes/fileflows/Temp:/app/Temp
-          - /mnt/media:/mnt/media
-        devices:
-          - /dev/dri:/dev/dri
-        restart_policy: unless-stopped
-
 - hosts: docker02
   become: yes
 
@@ -174,6 +186,14 @@
         name: keepalived
         enabled: yes
         state: started
+
+    - name: Ensure that the media NFS is mounted
+      mount:
+        src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
+        path: /mnt/media
+        opts: rw,sync,hard,nfsvers=4.1
+        state: mounted
+        fstype: nfs
 
     - name: Ensure that reverse proxy docker network is created
       docker_network:
@@ -227,6 +247,43 @@
           - "8099:8099"
         networks:
           - name: reverse_proxy
+
+    - name: Ensure that the fileflows volume Data directory exists
+      file:
+        path: /mnt/docker/volumes/fileflows/Data
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the fileflows volume Logs directory exists
+      file:
+        path: /mnt/docker/volumes/fileflows/Logs
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the fileflows volume Temp directory exists
+      file:
+        path: /mnt/docker/volumes/fileflows/Temp
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that the fileflows server docker container is running
+      docker_container:
+        name: fileflows01
+        hostname: fileflows01
+        image: "revenz/fileflows:{{ fileflows_tag }}"
+        ports:
+          - 5000:5000
+        volumes:
+          - /mnt/docker/volumes/fileflows/Data:/app/Data
+          - /mnt/docker/volumes/fileflows/Logs:/app/Logs
+          - /mnt/docker/volumes/fileflows/Temp:/app/Temp
+          - /mnt/media:/mnt/media
+        devices:
+          - /dev/dri:/dev/dri
+        restart_policy: unless-stopped
 
     - name: Ensure that the fenrus data directory exists
       file:

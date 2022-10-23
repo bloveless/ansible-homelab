@@ -31,6 +31,13 @@
     group: root
     owner: root
 
+- name: permit traffic in default zone for prometheus node exporter service
+  ansible.posix.firewalld:
+    port: 9100/tcp
+    permanent: yes
+    immediate: yes
+    state: enabled
+
 - name: Ensure prometheus node exporter is running and restarted
   systemd:
     daemon_reload: yes
