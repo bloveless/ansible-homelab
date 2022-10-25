@@ -154,6 +154,33 @@
           - "8000:8000"
           - "9443:9443"
 
+    - name: Ensure that the postgres data directory exists
+      file:
+        path: /mnt/docker/volumes/postgres/data
+        state: directory
+        owner: docker
+        group: users
+
+    - name: Ensure that postgres container is created
+      docker_container:
+        name: postgres
+        image: postgres:15-bullseye
+        restart_policy: always
+        env:
+          POSTGRES_PASSWORD: "{{ postgres_admin_password }}"
+        volumes:
+          - "/mnt/docker/volumes/postgres/data:/var/lib/postgresql/data"
+        ports:
+          - "5432:5432"
+
+    - name: Ensure that redis container is created
+      docker_container:
+        name: redis
+        image: redis:7.0-bullseye
+        restart_policy: always
+        ports:
+          - "6379:6379"
+
 - hosts: docker02
   become: yes
 

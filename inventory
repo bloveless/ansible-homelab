@@ -1,44 +1,22 @@
+mediaserver ansible_user=ansible
+brennonloveless ansible_user=ansible
+docker01 ansible_user=ansible
+docker02 ansible_user=ansible
+docker03 ansible_user=ansible
+monitoring ansible_user=ansible
+pihole01 ansible_user=ansible
+
 [proxmox]
-192.168.5.10
-192.168.5.50
-192.168.5.100
-
-[mediaserver]
-192.168.5.13 ansible_user=ansible
-
-[fileflows]
-192.168.5.14 ansible_user=ansible
-192.168.5.53 ansible_user=ansible
-
-[fileflows_server]
-192.168.5.14 ansible_user=ansible
-
-[fileflows_node]
-192.168.5.53 ansible_user=ansible
-
-[brennonloveless]
-192.168.5.103 ansible_user=ansible
+pve01
+pve02
+pve03
 
 [docker]
-192.168.5.15 ansible_user=ansible
-192.168.5.54 ansible_user=ansible
-192.168.5.104 ansible_user=ansible
-
-[docker01]
-192.168.5.15 ansible_user=ansible
-
-[docker02]
-192.168.5.54 ansible_user=ansible
-
-[docker03]
-192.168.5.104 ansible_user=ansible
-
-[monitoring]
-192.168.5.105 ansible_user=ansible
+docker01 ansible_user=ansible
+docker02 ansible_user=ansible
+docker03 ansible_user=ansible
 
 [pihole]
-192.168.5.16 ansible_user=ansible
-192.168.5.55 ansible_user=ansible
+pihole01 ansible_user=ansible
+pihole02 ansible_user=ansible
 
-[pihole01]
-192.168.5.16 ansible_user=ansible
