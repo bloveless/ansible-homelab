@@ -33,26 +33,27 @@ brennonloveless.com {
 	reverse_proxy http://192.168.5.103
 }
 
-brennonloveless.lan {
-	tls internal
+brennonloveless.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.103
 }
 
-dashboard.lan {
-	tls internal
+dashboard.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.54:3000
 }
 
-caddycerts.lan {
-	tls internal
-	root * /data/caddy/pki/authorities/local
-	file_server browse {
-		hide *.key
+portainer.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
 	}
-}
 
-portainer.lan {
-	tls internal
 	reverse_proxy https://192.168.5.15:9443 {
 		transport http {
 			tls_insecure_skip_verify
@@ -60,8 +61,11 @@ portainer.lan {
 	}
 }
 
-proxmox.lan {
-	tls internal
+proxmox.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy https://192.168.5.10:8006 {
 		transport http {
 			tls_insecure_skip_verify
@@ -69,8 +73,11 @@ proxmox.lan {
 	}
 }
 
-nas.lan {
-	tls internal
+nas.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy https://192.168.4.245:5001 {
 		transport http {
 			tls_insecure_skip_verify
@@ -78,67 +85,118 @@ nas.lan {
 	}
 }
 
-overseerr.lan {
-	tls internal
+overseerr.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.13:5055
 }
 
-radarr.lan {
-	tls internal
+radarr.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.13:7878
 }
 
-sonarr.lan {
-	tls internal
+sonarr.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.13:8989
 }
 
-prowlarr.lan {
-	tls internal
+prowlarr.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.13:9696
 }
 
-nzbget.lan {
-	tls internal
+nzbget.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.13:6789
 }
 
-qbittorrent.lan {
-	tls internal
+qbittorrent.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.13:8080
 }
 
-fileflows.lan {
-	tls internal
+fileflows.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.54:5000
 }
 
-grafana.lan {
-	tls internal
+grafana.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.105:3000
 }
 
-prometheus.lan {
-	tls internal
+prometheus.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.105:9090
 }
 
-notes.lan {
-	tls internal
+notes.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
 	reverse_proxy http://192.168.5.104:8080
 }
 
-pihole.lan {
-	tls internal
-	reverse_proxy http://192.168.5.16
+authelia.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
+	reverse_proxy http://192.168.5.15:9091
 }
 
-pihole02.lan {
-	tls internal
-	reverse_proxy http://192.168.5.55
+outline.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
+	reverse_proxy http://192.168.5.54:3001
 }
 
-code.lan {
-	tls internal
-	reverse_proxy http://192.168.5.54:8443
+minio-api.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
+	reverse_proxy http://192.168.5.15:9000
+}
+
+speedtest-tracker.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
+	reverse_proxy https://192.168.5.104:8443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
 }

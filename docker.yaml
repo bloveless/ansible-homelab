@@ -113,6 +113,12 @@
         name: keepalived
         state: restarted
 
+    - name: Restart authelia
+      docker_container:
+        name: authelia
+        state: started
+        restart: yes
+
   tasks:
     - name: Ensure that the keepalived config is updated
       template:
@@ -158,13 +164,14 @@
       file:
         path: /mnt/docker/volumes/postgres/data
         state: directory
-        owner: docker
-        group: users
+        owner: 999
+        group: 999
 
     - name: Ensure that postgres container is created
       docker_container:
         name: postgres
         image: postgres:15-bullseye
+        user: 999:999
         restart_policy: always
         env:
           POSTGRES_PASSWORD: "{{ postgres_admin_password }}"
@@ -180,6 +187,51 @@
         restart_policy: always
         ports:
           - "6379:6379"
+
+    - name: Ensure that authelia config directory exists
+      file:
+        path: /mnt/docker/volumes/authelia/config
+        state: directory
+        owner: 0
+        group: 0
+
+    - name: Ensure that authelia configuration file is updated
+      template:
+        src: config/authelia.config.yaml.j2
+        dest: /mnt/docker/volumes/authelia/config/configuration.yml
+      notify:
+        - Restart authelia
+
+    - name: Ensure that authelia container is created and running
+      docker_container:
+        name: authelia
+        image: authelia/authelia:4.37
+        restart_policy: always
+        volumes:
+          - "/mnt/docker/volumes/authelia/config:/config"
+        ports:
+          - "9091:9091"
+
+    - name: Ensure that authelia config directory exists
+      file:
+        path: /mnt/docker/volumes/minio/data
+        state: directory
+        owner: 1001
+        group: 1001
+
+    - name: Ensure that minio container is created and running
+      docker_container:
+        name: minio
+        image: bitnami/minio:2022-debian-11
+        restart_policy: always
+        env:
+          MINIO_ROOT_USER: root
+          MINIO_ROOT_PASSWORD: "{{ minio_root_password }}"
+        volumes:
+          - "/mnt/docker/volumes/minio/data:/data"
+        ports:
+          - "9000:9000"
+          - "9001:9001"
 
 - hosts: docker02
   become: yes
@@ -199,6 +251,12 @@
       systemd:
         name: keepalived
         state: restarted
+
+    - name: Restart outline
+      docker_container:
+        name: outline
+        state: started
+        restart: yes
 
   tasks:
     - name: Ensure that the keepalived config is updated
@@ -311,6 +369,29 @@
         devices:
           - /dev/dri:/dev/dri
         restart_policy: unless-stopped
+
+    - name: Ensure that outline config directory is created
+      file:
+        path: /mnt/docker/volumes/outline/config
+        state: directory
+        owner: 0
+        group: 0
+    
+    - name: Ensure that outline config exists
+      template:
+        src: config/outline.env.j2
+        dest: /mnt/docker/volumes/outline/config/outline.env
+      notify:
+        - Restart outline
+
+    - name: Ensure that outline container is created
+      docker_container:
+        name: outline
+        image: outlinewiki/outline:0.66.2
+        restart_policy: always
+        env_file: /mnt/docker/volumes/outline/config/outline.env
+        ports:
+          - "3001:3000"
 
     - name: Ensure that the fenrus data directory exists
       file:
@@ -440,3 +521,22 @@
           - 2112:8080
         restart_policy: unless-stopped
 
+    - name: Ensure that the speedtest tracker config directory exists
+      file:
+        path: /mnt/docker/volumes/speedtest_tracker/config
+        state: directory
+        owner: 1000
+        group: 1000
+
+    - name: Ensure that speedtest  tracker container is running
+      docker_container:
+        name: speedtest_tracker
+        image: ghcr.io/alexjustesen/speedtest-tracker:v0.1.0-alpha.10
+        env:
+          PUID: "1000"
+          PGID: "1000"
+        volumes:
+          - "/mnt/docker/volumes/speedtest_tracker/config:/config"
+        ports:
+          - "8443:443"
+        restart_policy: unless-stopped
