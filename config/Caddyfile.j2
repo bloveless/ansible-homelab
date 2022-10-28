@@ -181,12 +181,20 @@ outline.lan.brennonloveless.com {
 	reverse_proxy http://192.168.5.54:3001
 }
 
+minio.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
+	reverse_proxy http://192.168.4.245:9001
+}
+
 minio-api.lan.brennonloveless.com {
 	tls {
 		dns cloudflare  {{ cloudflare_dns_api_key }}
 	}
 
-	reverse_proxy http://192.168.5.15:9000
+	reverse_proxy http://192.168.4.245:9000
 }
 
 speedtest-tracker.lan.brennonloveless.com {

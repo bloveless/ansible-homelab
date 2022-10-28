@@ -215,12 +215,13 @@
     - name: Ensure that authelia config directory exists
       file:
         path: /mnt/docker/volumes/minio/data
-        state: directory
+        state: absent
         owner: 1001
         group: 1001
 
     - name: Ensure that minio container is created and running
       docker_container:
+        state: absent
         name: minio
         image: bitnami/minio:2022-debian-11
         restart_policy: always
