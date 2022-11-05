@@ -1,0 +1,767 @@
+---
+- hosts: podman
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+
+  handlers:
+    - name: Reboot
+      reboot:
+
+  tasks:
+    - name: Enable the EPEL repository
+      dnf:
+        name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ansible_distribution_major_version}}.noarch.rpm"
+        disable_gpg_check: yes
+        state: present
+
+    - name: Enable the RPM Fusion free repository
+      dnf:
+        name: "https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm"
+        disable_gpg_check: yes
+        state: present
+
+    - name: Enable the RPM Fusion nonfree repository
+      dnf:
+        name: "https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm"
+        disable_gpg_check: yes
+        state: present
+
+    - name: Ensure dependencies are installed
+      dnf:
+        update_cache: yes
+        name:
+          - rpcbind
+          - nfs-utils
+          - podman
+          - keepalived
+          - ipset
+          - libva-utils
+          - intel-media-driver
+
+    - name: Ensure chronyd daemon is started and enabled
+      systemd:
+        name: chronyd
+        enabled: yes
+        state: started
+
+    - name: Ensure podman daemon is started and enabled
+      systemd:
+        name: podman
+        enabled: yes
+        state: started
+
+    - name: Ensure podman socker is started and enabled
+      systemd:
+        name: podman.socket
+        enabled: yes
+        state: started
+
+    - name: Give podman access to the podman volumes via SELinux
+      command:
+        cmd: chcon -Rt svirt_sandbox_file_t /mnt/podman
+
+    # - name: Give podman access to the docker socket via SELinux
+    #   shell:
+    #     cmd: |
+    #       echo "Downloading docker socket policy"
+    #       rpm-ostree install policycoreutils-python-utils
+    #       echo "Need reboot"
+    #       # need to reboot
+
+    #       curl https://raw.githubusercontent.com/dpw/selinux-dockersock/master/dockersock.te -o /opt/dockersock.te
+
+    #       echo "Applying policy to system"
+    #       checkmodule -M -m -o dockersock.mod /opt/dockersock.te
+    #       semodule_package -o dockersock.pp -m dockersock.mod
+    #       sudo semodule -i dockersock.pp
+    #     creates: /opt/dockersock.te
+    #   notify:
+    #     - Reboot
+
+    - name: Include prometheus node exporter
+      include_tasks: shared_tasks/prometheus_node_exporter.yaml
+
+    - name: Ensure podman user is created
+      user:
+        name: podman
+
+- hosts: podman01
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+    - vars/secrets.yaml
+
+  handlers:
+    - name: Restart Keepalived
+      systemd:
+        name: keepalived
+        state: restarted
+
+    - name: Restart authelia
+      containers.podman.podman_container:
+        name: authelia
+        state: started
+        restart: yes
+
+  tasks:
+    - name: Ensure that the keepalived config is updated
+      template:
+        src: config/keepalived/podman01.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+
+    - name: Ensure keepalived daemon is started and enabled
+      systemd:
+        name: keepalived
+        enabled: yes
+        state: started
+
+    - name: Ensure that the media NFS is mounted
+      mount:
+        src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
+        path: /mnt/media
+        opts: rw,sync,hard,nfsvers=4.1
+        state: mounted
+        fstype: nfs
+
+    - name: Ensure that the portainer data directory exists
+      file:
+        path: /mnt/podman/volumes/portainer/data
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that portainer container is created
+      containers.podman.podman_container:
+        name: portainer
+        image: docker.io/portainer/portainer-ee:2.16.0
+        restart_policy: always
+        privileged: yes
+        volumes:
+          - "/run/podman/podman.sock:/var/run/docker.sock"
+          - "/mnt/podman/volumes/portainer/data:/data"
+        ports:
+          - "8000:8000"
+          - "9443:9443"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable portainer container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-portainer
+        state: started
+      register: service
+
+    - name: Ensure that the postgres data directory exists
+      file:
+        path: /mnt/podman/volumes/postgres/data
+        state: directory
+        owner: 999
+        group: 999
+
+    - name: Ensure that postgres container is created
+      containers.podman.podman_container:
+        name: postgres
+        image: docker.io/library/postgres:15-bullseye
+        user: 999:999
+        restart_policy: always
+        env:
+          POSTGRES_PASSWORD: "{{ postgres_admin_password }}"
+        volumes:
+          - "/mnt/podman/volumes/postgres/data:/var/lib/postgresql/data"
+        ports:
+          - "5432:5432"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable postgres container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-postgres
+        state: started
+      register: service
+
+    - name: Ensure that redis container is created
+      containers.podman.podman_container:
+        name: redis
+        image: docker.io/library/redis:7.0-bullseye
+        restart_policy: always
+        ports:
+          - "6379:6379"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable redis container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-redis
+        state: started
+      register: service
+
+    - name: Ensure that authelia config directory exists
+      file:
+        path: /mnt/podman/volumes/authelia/config
+        state: directory
+        owner: 0
+        group: 0
+
+    - name: Ensure that authelia configuration file is updated
+      template:
+        src: config/authelia.config.yaml.j2
+        dest: /mnt/podman/volumes/authelia/config/configuration.yml
+      notify:
+        - Restart authelia
+
+    - name: Ensure that authelia container is created and running
+      containers.podman.podman_container:
+        name: authelia
+        image: docker.io/authelia/authelia:4.37
+        restart_policy: always
+        volumes:
+          - "/mnt/podman/volumes/authelia/config:/config"
+        ports:
+          - "9091:9091"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable authelia container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-authelia
+        state: started
+      register: service
+
+- hosts: podman02
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+    - vars/secrets.yaml
+
+  handlers:
+    - name: Restart Caddy
+      containers.podman.podman_container:
+        name: caddy
+        state: started
+        restart: yes
+
+    - name: Restart Keepalived
+      systemd:
+        name: keepalived
+        state: restarted
+
+    - name: Restart outline
+      containers.podman.podman_container:
+        name: outline
+        state: started
+        restart: yes
+
+  tasks:
+    - name: Ensure that the keepalived config is updated
+      template:
+        src: config/keepalived/podman02.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+
+    - name: Ensure keepalived daemon is started and enabled
+      systemd:
+        name: keepalived
+        enabled: yes
+        state: started
+
+    - name: Ensure that the media NFS is mounted
+      mount:
+        src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
+        path: /mnt/media
+        opts: rw,sync,hard,nfsvers=4.1
+        state: mounted
+        fstype: nfs
+
+    - name: Ensure that reverse proxy podman network is created
+      containers.podman.podman_network:
+        name: reverse_proxy
+
+    - name: Ensure that the caddy data directory exists
+      file:
+        path: /mnt/podman/volumes/caddy/data
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that the caddy config directory exists
+      file:
+        path: /mnt/podman/volumes/caddy/config
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure the caddyfile is up to date
+      template:
+        src: config/Caddyfile.j2
+        dest: /mnt/podman/volumes/caddy/Caddyfile
+      notify:
+        - Restart Caddy
+
+    - name: Ensure that caddy container is created
+      containers.podman.podman_container:
+        name: caddy
+        image: docker.io/bloveless/caddy:2.5.2-0.1.0
+        restart_policy: always
+        network:
+          - reverse_proxy
+        volumes:
+          - "/mnt/podman/volumes/caddy/Caddyfile:/etc/caddy/Caddyfile"
+          - "/mnt/podman/volumes/caddy/data:/data"
+          - "/mnt/podman/volumes/caddy/config:/config"
+        ports:
+          - "80:80"
+          - "443:443"
+          - "443:443/udp"
+          - "8090:8090"
+          - "8043:8043"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable caddy container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-caddy
+        state: started
+      register: service
+
+    - name: Ensure cloudflared container is created
+      containers.podman.podman_container:
+        name: cloudflared
+        image: docker.io/cloudflare/cloudflared:2022.10.0-amd64
+        command: "tunnel --metrics 0.0.0.0:8099 run --token {{ cloudflared_key }}"
+        restart_policy: always
+        ports:
+          - "8099:8099"
+        network:
+          - reverse_proxy
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable cloudflared container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-cloudflared
+        state: started
+      register: service
+
+    - name: Ensure that the fileflows volume Data directory exists
+      file:
+        path: /mnt/podman/volumes/fileflows/Data
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that the fileflows volume Logs directory exists
+      file:
+        path: /mnt/podman/volumes/fileflows/Logs
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that the fileflows volume Temp directory exists
+      file:
+        path: /mnt/podman/volumes/fileflows/Temp
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that the fileflows server podman container is running
+      containers.podman.podman_container:
+        name: fileflows01
+        hostname: fileflows01
+        image: "docker.io/revenz/fileflows:{{ fileflows_tag }}"
+        ports:
+          - 5000:5000
+        volumes:
+          - /mnt/podman/volumes/fileflows/Data:/app/Data
+          - /mnt/podman/volumes/fileflows/Logs:/app/Logs
+          - /mnt/podman/volumes/fileflows/Temp:/app/Temp
+          - /mnt/media:/mnt/media
+        device: "/dev/dri:/dev/dri:rwm"
+        restart_policy: always
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable fileflows01 container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-fileflows01
+        state: started
+      register: service
+
+    - name: Ensure that outline config directory is created
+      file:
+        path: /mnt/podman/volumes/outline/config
+        state: directory
+        owner: 0
+        group: 0
+    
+    - name: Ensure that outline config exists
+      template:
+        src: config/outline.env.j2
+        dest: /mnt/podman/volumes/outline/config/outline.env
+      notify:
+        - Restart outline
+
+    - name: Ensure that outline container is created
+      containers.podman.podman_container:
+        name: outline
+        image: docker.io/outlinewiki/outline:0.66.2
+        restart_policy: always
+        env_file: /mnt/podman/volumes/outline/config/outline.env
+        ports:
+          - "3001:3000"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable outline container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-outline
+        state: started
+      register: service
+
+    - name: Ensure that the fenrus data directory exists
+      file:
+        path: /mnt/podman/volumes/fenrus/data
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that the fenrus images directory exists
+      file:
+        path: /mnt/podman/volumes/fenrus/images
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that fenrus container is created
+      containers.podman.podman_container:
+        name: fenrus
+        image: docker.io/revenz/fenrus:latest
+        restart_policy: always
+        env:
+          TZ: America/Los_Angeles
+        volumes:
+          - "/mnt/podman/volumes/fenrus/data:/app/data"
+          - "/mnt/podman/volumes/fenrus/images:/app/wwwroot/images"
+        ports:
+          - "3000:3000"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable fenrus container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-fenrus
+        state: started
+      register: service
+
+    - name: Ensure that poratiner edge agent volume is created
+      containers.podman.podman_volume:
+        name: portainer_agent_data
+
+    - name: Ensure that portainer edge agent container is created
+      containers.podman.podman_container:
+        name: portainer-edge-agent
+        image: docker.io/portainer/agent:2.16.0
+        restart_policy: always
+        privileged: yes
+        env:
+          EDGE: "1"
+          EDGE_ID: "{{ podman02_portainer_edge_agent_id }}"
+          EDGE_KEY: "{{ podman02_portainer_edge_agent_key }}"
+          EDGE_INSECURE_POLL: "1"
+        volumes:
+          - "/:/host"
+          - "/run/podman/podman.sock:/var/run/docker.sock"
+          - "/var/lib/containers/storage/volumes:/var/lib/docker/volumes"
+        mount:
+          - "type=volume,source=portainer_agent_data,destination=/data"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable portainer container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-portainer-edge-agent
+        state: started
+      register: service
+
+- hosts: podman03
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+    - vars/secrets.yaml
+
+  handlers:
+    - name: Restart Keepalived
+      systemd:
+        name: keepalived
+        state: restarted
+
+  tasks:
+    - name: Ensure that the keepalived config is updated
+      template:
+        src: config/keepalived/podman03.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+
+    - name: Ensure keepalived daemon is started and enabled
+      systemd:
+        name: keepalived
+        enabled: yes
+        state: started
+
+    - name: Ensure that the media NFS is mounted
+      mount:
+        src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
+        path: /mnt/media
+        opts: rw,sync,hard,nfsvers=4.1
+        state: mounted
+        fstype: nfs
+
+    - name: Ensure that the fileflows volume Data directory exists
+      file:
+        path: /mnt/podman/volumes/fileflows/Data
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that the fileflows volume Logs directory exists
+      file:
+        path: /mnt/podman/volumes/fileflows/Logs
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that the fileflows volume Temp directory exists
+      file:
+        path: /mnt/podman/volumes/fileflows/Temp
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure that the fileflows node podman container is running
+      containers.podman.podman_container:
+        name: fileflows02
+        hostname: fileflows02
+        image: "docker.io/revenz/fileflows:{{ fileflows_tag }}"
+        env:
+          FFNODE: "1"
+          ServerUrl: "http://{{ fileflows_server_address }}"
+        ports:
+          - 5000:5000
+        volumes:
+          - /mnt/podman/volumes/fileflows/Data:/app/Data
+          - /mnt/podman/volumes/fileflows/Logs:/app/Logs
+          - /mnt/podman/volumes/fileflows/Temp:/app/Temp
+          - /mnt/media:/mnt/media
+        device: "/dev/dri:/dev/dri:rwm"
+        restart_policy: always
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable fileflows02 container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-fileflows02
+        state: started
+      register: service
+
+    - name: Ensure that homelab exporter container is running
+      containers.podman.podman_container:
+        name: homelab-exporter
+        image: docker.io/bloveless/homelab-exporter:0.1.0
+        ports:
+          - 2112:8080
+        restart_policy: unless-stopped
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable homelab exporter container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-homelab-exporter
+        state: started
+      register: service
+
+    - name: Ensure that the speedtest tracker config directory exists
+      file:
+        path: /mnt/podman/volumes/speedtest_tracker/config
+        state: directory
+        owner: 1000
+        group: 1000
+
+    - name: Ensure that speedtest tracker container is running
+      containers.podman.podman_container:
+        state: stopped
+        name: speedtest_tracker
+        image: ghcr.io/alexjustesen/speedtest-tracker:v0.1.0-alpha.10
+        env:
+          PUID: "1000"
+          PGID: "1000"
+        volumes:
+          - "/mnt/podman/volumes/speedtest_tracker/config:/config"
+        ports:
+          - "8443:443"
+        restart_policy: unless-stopped
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Disable speedtest tracker container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: no
+        name: container-homelab-exporter
+        state: stopped
+      register: service
+
+    - name: Ensure that the omada controller data directory exists
+      file:
+        path: /mnt/podman/volumes/omada_controller/data
+        state: directory
+        owner: 508
+        group: 508
+
+    - name: Ensure that the omada controller logs directory exists
+      file:
+        path: /mnt/podman/volumes/omada_controller/logs
+        state: directory
+        owner: 508
+        group: 508
+
+    - name: Ensure that omada controller container is running
+      containers.podman.podman_container:
+        name: omada-controller
+        image: docker.io/mbentley/omada-controller:5.6-chromium
+        env:
+          MANAGE_HTTP_PORT: "8088"
+          MANAGE_HTTPS_PORT: "8043"
+          PGID: "508"
+          PORTAL_HTTP_PORT: "8088"
+          PORTAL_HTTPS_PORT: "8843"
+          PORT_ADOPT_V1: "29812"
+          PORT_APP_DISCOVERY: "27001"
+          PORT_DISCOVERY: "29810"
+          PORT_MANAGER_V1: "29811"
+          PORT_MANAGER_V2: "29814"
+          PORT_UPGRADE_V1: "29813"
+          PUID: "508"
+          SHOW_SERVER_LOGS: "true"
+          SHOW_MONGODB_LOGS: "false"
+          SSL_CERT_NAME: "tls.crt"
+          SSL_KEY_NAME: "tls.key"
+          TZ: "America/Los_Angeles"
+        volumes:
+          - "/mnt/podman/volumes/omada_controller/data:/opt/tplink/EAPController/data"
+          - "/mnt/podman/volumes/omada_controller/logs:/opt/tplink/EAPController/logs"
+        ports:
+          - "8443:443"
+          - "8088:8088"
+          - "8043:8043"
+          - "8843:8843"
+          - "27001:27001/udp"
+          - "29810:29810/udp"
+          - "29811:29811"
+          - "29812:29812"
+          - "29813:29813"
+          - "29814:29814"
+        restart_policy: always
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable omada controller container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-omada-controller
+        state: started
+      register: service
+
+    - name: Ensure that poratiner edge agent volume is created
+      containers.podman.podman_volume:
+        name: portainer_agent_data
+
+    - name: Ensure that portainer edge agent container is created
+      containers.podman.podman_container:
+        name: portainer-edge-agent
+        image: docker.io/portainer/agent:2.16.0
+        restart_policy: always
+        privileged: yes
+        env:
+          EDGE: "1"
+          EDGE_ID: "{{ podman03_portainer_edge_agent_id }}"
+          EDGE_KEY: "{{ podman03_portainer_edge_agent_key }}"
+          EDGE_INSECURE_POLL: "1"
+        volumes:
+          - "/:/host"
+          - "/run/podman/podman.sock:/var/run/docker.sock"
+          - "/var/lib/containers/storage/volumes:/var/lib/docker/volumes"
+        mount:
+          - "type=volume,source=portainer_agent_data,destination=/data"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable portainer container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-portainer-edge-agent
+        state: started
+      register: service

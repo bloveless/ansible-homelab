@@ -6,8 +6,8 @@ mediaserver:
 brennonloveless:
 	ansible-playbook -i inventory brennonloveless.yaml
 
-docker:
-	ansible-playbook -i inventory docker.yaml
+podman:
+	ansible-playbook -i inventory podman.yaml
 
 monitoring:
 	ansible-playbook -i inventory monitoring.yaml

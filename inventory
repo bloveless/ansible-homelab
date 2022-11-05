@@ -1,8 +1,8 @@
 mediaserver ansible_user=ansible
 brennonloveless ansible_user=ansible
-docker01 ansible_user=ansible
-docker02 ansible_user=ansible
-docker03 ansible_user=ansible
+podman01 ansible_user=ansible
+podman02 ansible_user=ansible
+podman03 ansible_user=ansible
 monitoring ansible_user=ansible
 pihole01 ansible_user=ansible
 
@@ -11,10 +11,10 @@ pve01
 pve02
 pve03
 
-[docker]
-docker01 ansible_user=ansible
-docker02 ansible_user=ansible
-docker03 ansible_user=ansible
+[podman]
+podman01 ansible_user=ansible
+podman02 ansible_user=ansible
+podman03 ansible_user=ansible
 
 [pihole]
 pihole01 ansible_user=ansible
