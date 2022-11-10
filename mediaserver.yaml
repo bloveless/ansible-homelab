@@ -1,5 +1,5 @@
 ---
-- hosts: mediaserver2
+- hosts: mediaserver
   become: yes
 
   vars_files:
