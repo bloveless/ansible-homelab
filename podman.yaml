@@ -62,24 +62,6 @@
       command:
         cmd: chcon -Rt svirt_sandbox_file_t /mnt/podman
 
-    # - name: Give podman access to the docker socket via SELinux
-    #   shell:
-    #     cmd: |
-    #       echo "Downloading docker socket policy"
-    #       rpm-ostree install policycoreutils-python-utils
-    #       echo "Need reboot"
-    #       # need to reboot
-
-    #       curl https://raw.githubusercontent.com/dpw/selinux-dockersock/master/dockersock.te -o /opt/dockersock.te
-
-    #       echo "Applying policy to system"
-    #       checkmodule -M -m -o dockersock.mod /opt/dockersock.te
-    #       semodule_package -o dockersock.pp -m dockersock.mod
-    #       sudo semodule -i dockersock.pp
-    #     creates: /opt/dockersock.te
-    #   notify:
-    #     - Reboot
-
     - name: Include prometheus node exporter
       include_tasks: shared_tasks/prometheus_node_exporter.yaml
 

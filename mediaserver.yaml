@@ -1,30 +1,11 @@
 ---
-- hosts: mediaserver
-
-  pre_tasks:
-    - name: Ensure pacman cache is updated
-      become: yes
-      pacman:
-        update_cache: yes
-
-  roles:
-    - role: jahrik.yay
-      install: true
-      aur_packages:
-        - sonarr
-        - radarr
-        - prowlarr
-        - overseerr
-        - flaresolverr-bin
-
-- hosts: mediaserver
-  gather_facts: yes
+- hosts: mediaserver2
   become: yes
 
   vars_files:
     - vars/main.yaml
     - vars/secrets.yaml
-
+  
   handlers:
     - name: Restart nzbget
       systemd:
@@ -32,62 +13,48 @@
         daemon_reload: yes
         state: restarted
 
-    - name: Restart qbittorrent
+    - name: Restart wireguard
       systemd:
-        name: qbittorrent-nox
+        name: wg-quick@wg0
         daemon_reload: yes
         state: restarted
 
   pre_tasks:
-    - name: Ensure pacman cache is updated
-      pacman:
-        update_cache: yes
+    - name: Add wireguard to kernel modules
+      copy:
+        content: "wireguard"
+        dest: "/etc/modules-load.d/wireguard.conf"
 
-    - name: Ensure dependencies are installed
-      pacman:
-        name:
-          - curl
-          - sqlite3
-          - rpcbind
-          - nfs-utils
-          - ntp
-          - wireguard-tools
-          - qbittorrent-nox
+    - name: Add ip_tables to kernel modules
+      copy:
+        content: "ip_tables"
+        dest: "/etc/modules-load.d/ip_tables.conf"
+
+    - name: Ensure that wireguard module is enabled
+      community.general.modprobe:
+        name: wireguard
         state: present
 
-    - name: Ensure ntpd daemon is started and enabled
-      systemd:
-        name: ntpd
-        enabled: yes
-        state: started
+    - name: Ensure that ip_tables module is enabled
+      community.general.modprobe:
+        name: ip_tables
+        state: present
 
-    - name: Ensure radarr daemon is started and enabled
-      systemd:
-        name: radarr
-        enabled: yes
-        state: started
+    - name: Ensure dependencies are installed
+      dnf:
+        update_cache: yes
+        name:
+          - rpcbind
+          - nfs-utils
+          - podman
+          - keepalived
+          - ipset
+          - chrony
+        state: present
 
-    - name: Ensure sonarr daemon is started and enabled
+    - name: Ensure chrony daemon is started and enabled
       systemd:
-        name: sonarr
-        enabled: yes
-        state: started
-
-    - name: Ensure prowlarr daemon is started and enabled
-      systemd:
-        name: prowlarr
-        enabled: yes
-        state: started
-
-    - name: Ensure overseerr daemon is started and enabled
-      systemd:
-        name: overseerr
-        enabled: yes
-        state: started
-
-    - name: Ensure flaresolverr daemon is started and enabled
-      systemd:
-        name: flaresolverr
+        name: chronyd
         enabled: yes
         state: started
 
@@ -104,93 +71,351 @@
         state: mounted
         fstype: nfs
 
+    - name: Ensure podman user is created
+      user:
+        name: podman
+
   tasks:
     - name: Include prometheus node exporter
       include_tasks: shared_tasks/prometheus_node_exporter.yaml
 
-    - name: Ensure wireguard config is present
+    - name: Give podman access to the podman volumes via SELinux
+      command:
+        cmd: chcon -Rt svirt_sandbox_file_t /mnt/podman
+
+    - name: Ensure wireguard data directory exists
+      file:
+        path: /mnt/podman/volumes/wireguard/data
+        state: directory
+        owner: podman
+        group: users
+
+    - name: Ensure wireguard config exists
       copy:
         content: "{{ wireguard_config }}"
-        dest: /etc/wireguard/wg0.conf
-        owner: root
-        group: root
-        mode: 0600
+        dest: /mnt/podman/volumes/wireguard/data/wg0.conf
 
-    - name: Ensure that ip forwarding is enabled
-      sysctl:
-        name: net.ipv4.ip_forward
-        value: "1"
-        state: present
-        sysctl_set: yes
-        reload: yes
+    - name: Check if wireguard container will make changes
+      containers.podman.podman_container: &wireguard_container_config
+        name: wireguard
+        image: docker.io/linuxserver/wireguard:1.0.20210914
+        restart_policy: always
+        privileged: true
+        volumes:
+          - "/mnt/podman/volumes/wireguard/data/wg0.conf:/config/wg0.conf"
+        # Because the network stack is shared to dependent containers the ports actually need to be opened on the wireguard container
+        ports:
+          - "6789:6789"
+          - "8080:8080"
+          - "6881:6881"
+          - "6881:6881/udp"
+          - "7878:7878"
+          - "8989:8989"
+          - "5055:5055"
+          - "9696:9696"
+          - "8191:8191"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+      check_mode: yes
+      register: changes_to_wireguard_container
 
-    - name: Ensure wireguard interface is started and enabled
-      systemd:
-        name: wg-quick@wg0
-        enabled: yes
-        state: started
+    - name: Remove netshoot container
+      containers.podman.podman_container:
+        name: netshoot
+        state: absent
+      when: changes_to_wireguard_container is changed
 
-    - name: Ensure that the media group exists
-      group:
-        name: media
-        state: present
-
-    - name: Ensure that the nzbget user exists
-      user:
-        append: yes
-        groups:
-          - media
+    - name: Remove nzbget container
+      containers.podman.podman_container:
         name: nzbget
-        state: present
+        state: absent
+      when: changes_to_wireguard_container is changed
 
-    - name: Ensure that the nzbget install file exists
-      get_url:
-        url: https://nzbget.net/download/nzbget-latest-bin-linux.run
-        dest: /opt/install-nzbget.run
-
-    - name: Ensure nzbget is installed
-      become: yes
-      become_user: nzbget
-      command:
-        cmd: sh /opt/install-nzbget.run
-        chdir: /home/nzbget
-        creates: /home/nzbget/nzbget/nzbget
-
-    - name: Ensure the nzbget service file exists
-      copy:
-        src: config/nzbget.service
-        dest: /etc/systemd/system/nzbget.service
-        group: root
-        owner: root
-      notify:
-        - Restart nzbget
-
-    - name: Ensure the nzbget service is started and enabled
-      systemd:
-        name: nzbget
-        enabled: yes
-        daemon_reload: yes
-        state: started
-
-    - name: Ensure that the qbittorrent user exists
-      user:
-        append: yes
-        groups:
-          - media
+    - name: Remove qbittorrent container
+      containers.podman.podman_container:
         name: qbittorrent
-        state: present
+        state: absent
+      when: changes_to_wireguard_container is changed
 
-    - name: Ensure the qbittorrent service file exists
-      copy:
-        src: config/qbittorrent-nox.service
-        dest: /etc/systemd/system/qbittorrent-nox.service
-        group: root
-        owner: root
-      notify:
-        - Restart qbittorrent
+    - name: Remove radarr container
+      containers.podman.podman_container:
+        name: radarr
+        state: absent
+      when: changes_to_wireguard_container is changed
 
-    - name: Ensure the qbittorret service is started and enabled
+    - name: Remove sonarr container
+      containers.podman.podman_container:
+        name: sonarr
+        state: absent
+      when: changes_to_wireguard_container is changed
+
+    - name: Ensure wireguard container is created
+      containers.podman.podman_container:
+        <<: *wireguard_container_config
+
+    - name: Enable wireguard container start on boot
       systemd:
-        name: qbittorrent-nox
         daemon_reload: yes
+        enabled: yes
+        name: container-wireguard
         state: started
+      register: service
+
+    - name: Ensure that netshoot container is created
+      containers.podman.podman_container:
+        name: netshoot
+        image: docker.io/nicolaka/netshoot:v0.8
+        restart_policy: always
+        command: ["tail", "-f", "/dev/null"]
+        network:
+          - container:wireguard
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable netshoot container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-netshoot
+        state: started
+      register: service
+
+    - name: Ensure nzbget config directory exists
+      file:
+        path: /mnt/podman/volumes/nzbget/config
+        state: directory
+        owner: 1000
+        group: 1000
+
+    - name: Ensure that nzbget container is created
+      containers.podman.podman_container:
+        name: nzbget
+        image: docker.io/linuxserver/nzbget:21.1.20221103
+        restart_policy: always
+        env:
+          PUID: "1000"
+          PGID: "1000"
+          TZ: America/Los_Angeles
+        network:
+          - container:wireguard
+        volumes:
+          - "/mnt/podman/volumes/nzbget/config:/config"
+          - "/mnt/media:/mnt/media"
+        # Because the network stack is shared to dependent containers the ports actually need to be opened on the wireguard container
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable nzbget container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-nzbget
+        state: started
+      register: service
+
+    - name: Ensure qbittorrent config directory exists
+      file:
+        path: /mnt/podman/volumes/qbittorrent/config
+        state: directory
+        owner: 1000
+        group: 1000
+
+    - name: Ensure that qbittorrent container is created
+      containers.podman.podman_container:
+        name: qbittorrent
+        image: docker.io/linuxserver/qbittorrent:4.4.5
+        restart_policy: always
+        network:
+          - container:wireguard
+        # Because the network stack is shared to dependent containers the ports actually need to be opened on the wireguard container
+        env:
+          PUID: "1000"
+          PGID: "1000"
+          TZ: America/Los_Angeles
+          WEBUI_PORT: "8080"
+        volumes:
+          - "/mnt/podman/volumes/qbittorrent/config:/config"
+          - "/mnt/media:/mnt/media"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable qbittorrent container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-qbittorrent
+        state: started
+      register: service
+
+    - name: Ensure radarr config directory exists
+      file:
+        path: /mnt/podman/volumes/radarr/config
+        state: directory
+        owner: 1000
+        group: 1000
+
+    - name: Ensure that radarr container is created
+      containers.podman.podman_container:
+        name: radarr
+        image: docker.io/linuxserver/radarr:4.2.4
+        restart_policy: always
+        network:
+          - container:wireguard
+        # Because the network stack is shared to dependent containers the ports actually need to be opened on the wireguard container
+        env:
+          PUID: "1000"
+          PGID: "1000"
+          TZ: America/Los_Angeles
+        volumes:
+          - "/mnt/podman/volumes/radarr/config:/config"
+          - "/mnt/media:/mnt/media"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable radarr container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-radarr
+        state: started
+      register: service
+
+    - name: Ensure sonarr config directory exists
+      file:
+        path: /mnt/podman/volumes/sonarr/config
+        state: directory
+        owner: 1000
+        group: 1000
+
+    - name: Ensure that sonarr container is created
+      containers.podman.podman_container:
+        name: sonarr
+        image: docker.io/linuxserver/sonarr:3.0.9
+        restart_policy: always
+        network:
+          - container:wireguard
+        # Because the network stack is shared to dependent containers the ports actually need to be opened on the wireguard container
+        env:
+          PUID: "1000"
+          PGID: "1000"
+          TZ: America/Los_Angeles
+        volumes:
+          - "/mnt/podman/volumes/sonarr/config:/config"
+          - "/mnt/media:/mnt/media"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable sonarr container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-sonarr
+        state: started
+      register: service
+
+    - name: Ensure overseerr config directory exists
+      file:
+        path: /mnt/podman/volumes/overseerr/config
+        state: directory
+        owner: 1000
+        group: 1000
+
+    - name: Ensure that overseerr container is created
+      containers.podman.podman_container:
+        name: overseerr
+        image: docker.io/linuxserver/overseerr:1.30.1
+        restart_policy: always
+        network:
+          - container:wireguard
+        # Because the network stack is shared to dependent containers the ports actually need to be opened on the wireguard container
+        env:
+          PUID: "1000"
+          PGID: "1000"
+          TZ: America/Los_Angeles
+        volumes:
+          - "/mnt/podman/volumes/overseerr/config:/config"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable overseerr container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-overseerr
+        state: started
+      register: service
+
+    - name: Ensure prowlarr config directory exists
+      file:
+        path: /mnt/podman/volumes/prowlarr/config
+        state: directory
+        owner: 1000
+        group: 1000
+
+    - name: Ensure that prowlarr container is created
+      containers.podman.podman_container:
+        name: prowlarr
+        image: docker.io/linuxserver/prowlarr:0.4.8-develop
+        restart_policy: always
+        network:
+          - container:wireguard
+        # Because the network stack is shared to dependent containers the ports actually need to be opened on the wireguard container
+        env:
+          PUID: "1000"
+          PGID: "1000"
+          TZ: America/Los_Angeles
+        volumes:
+          - "/mnt/podman/volumes/prowlarr/config:/config"
+          - "/mnt/media:/mnt/media"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable prowlarr container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-prowlarr
+        state: started
+      register: service
+
+    - name: Ensure that flaresolverr container is created
+      containers.podman.podman_container:
+        name: flaresolverr
+        image: docker.io/flaresolverr/flaresolverr:v2.2.10
+        restart_policy: always
+        network:
+          - container:wireguard
+        # Because the network stack is shared to dependent containers the ports actually need to be opened on the wireguard container
+        env:
+          PUID: "1000"
+          PGID: "1000"
+          TZ: America/Los_Angeles
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable flaresolverr container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-flaresolverr
+        state: started
+      register: service
+
