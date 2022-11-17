@@ -14,3 +14,6 @@ monitoring:
 
 pihole:
 	ansible-playbook -i inventory pihole.yaml
+
+dnsmasq:
+	ansible-playbook -i inventory dnsmasq.yaml

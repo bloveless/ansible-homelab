@@ -1,0 +1,25 @@
+interface=ens18
+bind-dynamic
+
+# never forward addresses in the non-routed address spaces
+domain-needed
+
+# query with each server strictly in the order in resolv.conf
+bogus-priv
+
+# query with each server strictly in the order in [resolv.conf]
+strict-order
+
+# query the specific domain name to the specific DNS server
+# example below means query [server.education] domain to [10.0.0.10] server
+# server=/server.education/10.0.0.10
+
+# setup upstream dns servers to cloudflare dns
+server=1.1.1.1
+server=1.0.0.1
+
+# add domain name automatically to hostnames
+expand-hosts
+
+# add internal domain
+domain=lan.brennonloveless.com

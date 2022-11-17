@@ -209,6 +209,14 @@ speedtest-tracker.lan.brennonloveless.com {
 	}
 }
 
+openspeedtest.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
+	reverse_proxy http://192.168.5.104:3000
+}
+
 omada.lan.brennonloveless.com {
 	redir https://omada.lan.brennonloveless.com:8043{url} permanent
 }

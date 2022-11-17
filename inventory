@@ -5,6 +5,8 @@ podman02 ansible_user=ansible
 podman03 ansible_user=ansible
 monitoring ansible_user=ansible
 pihole01 ansible_user=ansible
+dnsmasq01 ansible_user=ansible
+dnsmasq02 ansible_user=ansible
 
 [proxmox]
 pve01
@@ -20,3 +22,6 @@ podman03 ansible_user=ansible
 pihole01 ansible_user=ansible
 pihole02 ansible_user=ansible
 
+[dnsmasq]
+dnsmasq01 ansible_user=ansible
+dnsmasq02 ansible_user=ansible

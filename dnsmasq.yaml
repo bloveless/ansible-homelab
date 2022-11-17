@@ -1,0 +1,122 @@
+---
+- hosts: dnsmasq
+  become: yes
+
+  vars_files:
+    - vars/main.yaml
+    - vars/secrets.yaml
+
+  handlers:
+    - name: Restart Keepalived
+      systemd:
+        name: keepalived
+        state: restarted
+
+    - name: Restart dnsmasq
+      systemd:
+        name: dnsmasq
+        state: restarted
+
+  tasks:
+    - name: Include prometheus node exporter
+      include_tasks: shared_tasks/prometheus_node_exporter.yaml
+
+    - name: Ensure dependencies are installed
+      dnf:
+        update_cache: yes
+        name:
+          - keepalived
+          - dnsmasq
+          - unzip
+          - tar
+          - python3-firewall
+          - firewalld
+
+    - name: Ensure firewalld is started and enabled
+      systemd:
+        name: firewalld
+        enabled: yes
+        state: started
+
+    - name: Disable bind-interfaces in dnsmasq.conf
+      replace:
+        path: /etc/dnsmasq.conf
+        regexp: "^bind-interfaces$"
+        replace: "#bind-interfaces"
+
+    - name: Ensure dnsmasq.conf is updated
+      template:
+        src: config/dnsmasq.conf.j2
+        dest: /etc/dnsmasq.d/dnsmasq.conf
+      notify:
+        - Restart dnsmasq
+
+    - name: Ensure that dnsmasq is enabled and started
+      systemd:
+        name: dnsmasq
+        enabled: yes
+        state: started
+
+    - name: Ensure that local hosts are added to /etc/hosts on dnsmasq server
+      lineinfile:
+        dest: /etc/hosts
+        line: "{{ item }}"
+      loop:
+        - "192.168.5.54\tauthelia"
+        - "192.168.5.54\tbrennonloveless"
+        - "192.168.5.54\tdashboard"
+        - "192.168.5.54\tfileflows"
+        - "192.168.5.54\tgrafana"
+        - "192.168.5.54\tminio-api"
+        - "192.168.5.54\tminio"
+        - "192.168.5.54\tnas"
+        - "192.168.5.54\tnotes"
+        - "192.168.5.54\tnzbget"
+        - "192.168.5.54\tomada"
+        - "192.168.5.54\topenspeedtest"
+        - "192.168.5.54\toutline"
+        - "192.168.5.54\toverseerr"
+        - "192.168.5.54\tportainer"
+        - "192.168.5.15\tpostgres"
+        - "192.168.5.54\tprometheus"
+        - "192.168.5.54\tprowlarr"
+        - "192.168.5.54\tproxmox"
+        - "192.168.5.54\tqbittorrent"
+        - "192.168.5.54\tradarr"
+        - "192.168.5.15\tredis"
+        - "192.168.5.54\tsonarr"
+        - "192.168.5.54\tspeedtest-tracker"
+      notify:
+        - Restart dnsmasq
+
+    - name: Open firewall port for dnsmasq
+      ansible.posix.firewalld:
+        service: dns
+        permanent: yes
+        state: enabled
+
+    # chronyd can't be installed because LXC's cannot adjust the system time
+    # this is fine because the system time is already managed by ntp on the host
+
+    - name: Copy dnsmasq01.j2 keepalived config to dnsmasq01
+      template:
+        src: config/keepalived/dnsmasq01.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+      when: ansible_hostname == "dnsmasq01"
+
+    - name: Copy dnsmasq02.j2 keepalived config to dnsmasq02
+      template:
+        src: config/keepalived/dnsmasq02.j2
+        dest: /etc/keepalived/keepalived.conf
+      notify:
+        - Restart Keepalived
+      when: ansible_hostname == "dnsmasq02"
+
+    - name: Ensure keepalived daemon is started and enabled
+      systemd:
+        name: keepalived
+        enabled: yes
+        state: started
+

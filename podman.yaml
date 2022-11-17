@@ -120,7 +120,7 @@
     - name: Ensure that portainer container is created
       containers.podman.podman_container:
         name: portainer
-        image: docker.io/portainer/portainer-ee:2.16.0
+        image: "docker.io/portainer/portainer-ee:{{ portainer_version }}"
         restart_policy: always
         privileged: yes
         volumes:
@@ -484,7 +484,7 @@
     - name: Ensure that portainer edge agent container is created
       containers.podman.podman_container:
         name: portainer-edge-agent
-        image: docker.io/portainer/agent:2.16.0
+        image: "docker.io/portainer/agent:{{ portainer_version }}"
         restart_policy: always
         privileged: yes
         env:
@@ -721,7 +721,7 @@
     - name: Ensure that portainer edge agent container is created
       containers.podman.podman_container:
         name: portainer-edge-agent
-        image: docker.io/portainer/agent:2.16.0
+        image: "docker.io/portainer/agent:{{ portainer_version }}"
         restart_policy: always
         privileged: yes
         env:
@@ -745,5 +745,26 @@
         daemon_reload: yes
         enabled: yes
         name: container-portainer-edge-agent
+        state: started
+      register: service
+
+    - name: Ensure that openspeedtest container is created
+      containers.podman.podman_container:
+        name: openspeedtest
+        image: "docker.io/openspeedtest/latest:latest"
+        restart_policy: always
+        ports:
+          - "3000:3000"
+          - "3001:3001"
+        generate_systemd:
+          path: /etc/systemd/system
+          restart_policy: always
+          time: 120
+
+    - name: Enable openspeedtest container start on boot
+      systemd:
+        daemon_reload: yes
+        enabled: yes
+        name: container-openspeedtest
         state: started
       register: service
