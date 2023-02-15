@@ -603,7 +603,7 @@
         image: docker.io/bloveless/homelab-exporter:0.1.0
         ports:
           - 2112:8080
-        restart_policy: unless-stopped
+        restart_policy: always
         generate_systemd:
           path: /etc/systemd/system
           restart_policy: always
@@ -667,7 +667,7 @@
     - name: Ensure that omada controller container is running
       containers.podman.podman_container:
         name: omada-controller
-        image: docker.io/mbentley/omada-controller:5.6-chromium
+        image: docker.io/mbentley/omada-controller:5.7-chromium
         env:
           MANAGE_HTTP_PORT: "8088"
           MANAGE_HTTPS_PORT: "8043"

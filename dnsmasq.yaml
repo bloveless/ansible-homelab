@@ -63,6 +63,9 @@
         line: "{{ item }}"
       loop:
         - "192.168.5.54\tauthelia"
+        - "192.168.5.54\tconsul"
+        - "192.168.5.54\tnomad"
+        - "192.168.5.54\tfabio"
         - "192.168.5.54\tbrennonloveless"
         - "192.168.5.54\tdashboard"
         - "192.168.5.54\tfileflows"

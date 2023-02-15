@@ -10,9 +10,6 @@ traefik_version: 2.8.3
 traefik_checksum: sha256:617b869cf3787cf1832fd5eb9a037bcccd93fa4625b896760027bb764f9c4fcf
 
 fileflows_server_address: 192.168.5.54:5000
-fileflows_tag: 1.0.5
+fileflows_tag: 1.0.8
 
-brennonloveless_tag: v0.1.0
-brennonloveless_download_url: https://github.com/bloveless/brennonloveless.com/releases/download/v0.1.0/brennonloveless.com-v0.1.0.tgz
-brennonloveless_checksum: sha256:1787d77bf588692350c2454e54d97d9e5e0761dfc643fb78c9fe39bbd5978a81
 portainer_version: 2.16.1

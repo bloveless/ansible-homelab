@@ -30,7 +30,7 @@ brennonloveless.com {
 		dns cloudflare  {{ cloudflare_dns_api_key }}
 	}
 
-	reverse_proxy http://192.168.5.103
+	reverse_proxy http://192.168.5.202:9999
 }
 
 brennonloveless.lan.brennonloveless.com {
@@ -38,7 +38,7 @@ brennonloveless.lan.brennonloveless.com {
 		dns cloudflare  {{ cloudflare_dns_api_key }}
 	}
 
-	reverse_proxy http://192.168.5.103
+	reverse_proxy http://192.168.5.202:9999
 }
 
 dashboard.lan.brennonloveless.com {
@@ -232,3 +232,29 @@ omada.lan.brennonloveless.com:8043 {
 		}
 	}
 }
+
+
+consul.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
+	reverse_proxy http://192.168.5.20:8500
+}
+
+nomad.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
+	reverse_proxy http://192.168.5.20:4646
+}
+
+fabio.lan.brennonloveless.com {
+	tls {
+		dns cloudflare  {{ cloudflare_dns_api_key }}
+	}
+
+	reverse_proxy http://192.168.5.202:9998
+}
+
