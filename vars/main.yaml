@@ -3,9 +3,6 @@ radarr_version: 4.2.4.6635
 radarr_download_url: https://github.com/Radarr/Radarr/releases/download/v4.1.0.6175/Radarr.master.4.1.0.6175.linux-core-x64.tar.gz
 radarr_checksum: sha256:de8c42060fa5c4df1e19a4b592620ad242f6a9434e2c784b9e430f98f959732c
 
-cloudflared_version: 2022.9.0
-cloudflared_checksum: sha256:c1e8bb96ddb4298831a4cf473d26f6fd7a09026dc43d07f3bde73ca35e07493d
-
 traefik_version: 2.8.3
 traefik_checksum: sha256:617b869cf3787cf1832fd5eb9a037bcccd93fa4625b896760027bb764f9c4fcf
 

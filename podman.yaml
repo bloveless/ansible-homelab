@@ -238,12 +238,6 @@
     - vars/secrets.yaml
 
   handlers:
-    - name: Restart Caddy
-      containers.podman.podman_container:
-        name: caddy
-        state: started
-        restart: yes
-
     - name: Restart Keepalived
       systemd:
         name: keepalived
@@ -280,80 +274,6 @@
     - name: Ensure that reverse proxy podman network is created
       containers.podman.podman_network:
         name: reverse_proxy
-
-    - name: Ensure that the caddy data directory exists
-      file:
-        path: /mnt/podman/volumes/caddy/data
-        state: directory
-        owner: podman
-        group: users
-
-    - name: Ensure that the caddy config directory exists
-      file:
-        path: /mnt/podman/volumes/caddy/config
-        state: directory
-        owner: podman
-        group: users
-
-    - name: Ensure the caddyfile is up to date
-      template:
-        src: config/Caddyfile.j2
-        dest: /mnt/podman/volumes/caddy/Caddyfile
-      notify:
-        - Restart Caddy
-
-    - name: Ensure that caddy container is created
-      containers.podman.podman_container:
-        name: caddy
-        image: docker.io/bloveless/caddy:2.5.2-0.1.0
-        restart_policy: always
-        network:
-          - reverse_proxy
-        volumes:
-          - "/mnt/podman/volumes/caddy/Caddyfile:/etc/caddy/Caddyfile"
-          - "/mnt/podman/volumes/caddy/data:/data"
-          - "/mnt/podman/volumes/caddy/config:/config"
-        ports:
-          - "80:80"
-          - "443:443"
-          - "443:443/udp"
-          - "8090:8090"
-          - "8043:8043"
-        generate_systemd:
-          path: /etc/systemd/system
-          restart_policy: always
-          time: 120
-
-    - name: Enable caddy container start on boot
-      systemd:
-        daemon_reload: yes
-        enabled: yes
-        name: container-caddy
-        state: started
-      register: service
-
-    - name: Ensure cloudflared container is created
-      containers.podman.podman_container:
-        name: cloudflared
-        image: docker.io/cloudflare/cloudflared:2022.10.0-amd64
-        command: "tunnel --metrics 0.0.0.0:8099 run --token {{ cloudflared_key }}"
-        restart_policy: always
-        ports:
-          - "8099:8099"
-        network:
-          - reverse_proxy
-        generate_systemd:
-          path: /etc/systemd/system
-          restart_policy: always
-          time: 120
-
-    - name: Enable cloudflared container start on boot
-      systemd:
-        daemon_reload: yes
-        enabled: yes
-        name: container-cloudflared
-        state: started
-      register: service
 
     - name: Ensure that the fileflows volume Data directory exists
       file:
