@@ -104,7 +104,7 @@
 
     - name: Ensure that the media NFS is mounted
       mount:
-        src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
+        src: 192.168.4.245:/volume1/homelab/media-server/plex/data/library
         path: /mnt/media
         opts: rw,sync,hard,nfsvers=4.1
         state: mounted
@@ -271,7 +271,7 @@
 
     - name: Ensure that the media NFS is mounted
       mount:
-        src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
+        src: 192.168.4.245:/volume1/homelab/media-server/plex/data/library
         path: /mnt/media
         opts: rw,sync,hard,nfsvers=4.1
         state: mounted
@@ -540,7 +540,7 @@
 
     - name: Ensure that the media NFS is mounted
       mount:
-        src: 192.168.4.245:/volume1/k8s/media-server/plex/data/library
+        src: 192.168.4.245:/volume1/homelab/media-server/plex/data/library
         path: /mnt/media
         opts: rw,sync,hard,nfsvers=4.1
         state: mounted
